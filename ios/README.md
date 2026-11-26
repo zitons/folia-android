@@ -6,6 +6,6 @@ GitHub Actions 的 **Build iOS** 使用 `macos-26` 和仓库指定的 Node 版�
 
 ### 音源和实测范围
 
-iOS 使用 Web 播放路径。可先在应用内配置 HTTPS Navidrome。使用自托管的网易云、酷狗或 QQ API 时，可在 Actions 的 **Variables** 中分别设置 `IOS_NETEASE_API_BASE`、`IOS_KUGOU_API_BASE`、`IOS_QQ_API_BASE`。需要 Folia 的歌词代理时，把 `IOS_LYRIC_PROXY_BASE` 设为部署 `/api/lyric-proxy` 的 HTTPS 站点根地址。服务端需允许来自应用 WebView 的跨域请求。这些地址会编进前端包，凭据应在运行时登录时输入。
+iOS 使用 Web 播放路径。此 fork 的 Actions 构建默认接入 `https://api-enhanced-eosin-one.vercel.app` 作为网易云后端。可在 Actions 的 **Variables** 中用 `IOS_NETEASE_API_BASE` 覆盖该地址，或通过 `IOS_KUGOU_API_BASE`、`IOS_QQ_API_BASE` 接入对应的自托管音源。也可在应用内配置 HTTPS Navidrome。需要 Folia 的歌词代理时，把 `IOS_LYRIC_PROXY_BASE` 设为部署 `/api/lyric-proxy` 的 HTTPS 站点根地址。服务端需允许来自应用 WebView 的跨域请求。这些地址会编进前端包，凭据应在运行时登录时输入。
 
 这个版本提供 iOS 工程和 IPA 构建。原生后台播放、锁屏切歌和本地曲库属于后续移植范围，各音源的登录、播放和歌词同步需要在 iPhone 上验收。

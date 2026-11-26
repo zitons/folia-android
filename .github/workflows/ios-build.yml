@@ -39,7 +39,7 @@ jobs:
         run: npm ci
       - name: Build and sync iOS web assets
         env:
-          VITE_NETEASE_API_BASE: ${{ vars.IOS_NETEASE_API_BASE }}
+          VITE_NETEASE_API_BASE: ${{ vars.IOS_NETEASE_API_BASE || 'https://api-enhanced-eosin-one.vercel.app' }}
           VITE_KUGOU_API_BASE: ${{ vars.IOS_KUGOU_API_BASE }}
           VITE_QQ_API_BASE: ${{ vars.IOS_QQ_API_BASE }}
           VITE_IOS_LYRIC_PROXY_BASE: ${{ vars.IOS_LYRIC_PROXY_BASE }}
