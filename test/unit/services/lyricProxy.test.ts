@@ -7,6 +7,7 @@ import { lyricProxyWebUrl, requestLyricProxyOnDesktop } from '@/services/lyricPr
 describe('lyricProxy', () => {
     afterEach(() => {
         vi.unstubAllGlobals();
+        vi.unstubAllEnvs();
     });
 
     it('builds the web address with the whole target encoded into one parameter', () => {
@@ -18,6 +19,22 @@ describe('lyricProxy', () => {
             '/api/lyric-proxy?url=http%3A%2F%2Fcomplexsearch.kugou.com%2Fv2%2Fsearch%2Fsong%3Fkeyword%3D%E5%91%A8%E6%9D%B0%E4%BC%A6%20%E6%99%B4%E5%A4%A9%26page%3D1%23top',
         );
         expect(new URL(address, 'http://localhost').searchParams.get('url')).toBe(target);
+    });
+
+    it('uses the configured HTTPS relay for iOS bundles', () => {
+        vi.stubEnv('MODE', 'ios');
+        vi.stubEnv('VITE_IOS_LYRIC_PROXY_BASE', 'https://music.example.test/');
+
+        const target = 'https://u.y.qq.com/cgi-bin/musicu.fcg';
+        const address = new URL(lyricProxyWebUrl(target));
+        expect(address.origin).toBe('https://music.example.test');
+        expect(address.pathname).toBe('/api/lyric-proxy');
+        expect(address.searchParams.get('url')).toBe(target);
+    });
+
+    it('keeps the relay same-origin in regular web bundles', () => {
+        vi.stubEnv('VITE_IOS_LYRIC_PROXY_BASE', 'https://music.example.test/');
+        expect(lyricProxyWebUrl('https://u.y.qq.com')).toBe('/api/lyric-proxy?url=https%3A%2F%2Fu.y.qq.com');
     });
 
     it('calls the desktop bridge with the target and the request it was given', async () => {

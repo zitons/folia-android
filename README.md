@@ -164,6 +164,7 @@ Linux 包、Wayland / Hyprland 遥控窗和桌面端细节见 [技术与开发�
 | **PWA（推荐）** | 部署 Web 版本或自托管版本后，在 Chrome for Android / iOS Safari 中将网页添加到主屏幕，即可作为 PWA 应用使用。 |
 | **社区移植版（Android）** | [folia-ce/folia-sonnet](https://github.com/folia-ce/folia-sonnet) · [whycfawa/folia-android](https://github.com/whycfawa/folia-android) |
 | **自行打包（Android）** | 有一定技术基础的用户可以用 Capacitor 将 Web 版本打包为可安装的 APK，参考示范仓库 [chthollyphile/folia-sonnet](https://github.com/chthollyphile/folia-sonnet)。 |
+| **自行打包（iOS，实验性）** | 用 GitHub Actions 构建未签名的真机 IPA。见 [iOS 构建说明](ios/README.md)。 |
 > [!NOTE]
 > 模组系统是实验性功能，node模组在移动版不可用，默认关闭，需要在「设置 → 模组 → 模组系统」中开启。
 

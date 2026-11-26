@@ -19,9 +19,12 @@
 type LyricProxyBridge = NonNullable<Window['electron']>['fetchLyricProxy'];
 
 /** The relay's address on the web for one target URL. */
-export const lyricProxyWebUrl = (targetUrl: string): string => (
-    `/api/lyric-proxy?url=${encodeURIComponent(targetUrl)}`
-);
+export const lyricProxyWebUrl = (targetUrl: string): string => {
+    const base = import.meta.env.MODE === 'ios'
+        ? String(import.meta.env.VITE_IOS_LYRIC_PROXY_BASE || '').replace(/\/+$/, '')
+        : '';
+    return `${base}/api/lyric-proxy?url=${encodeURIComponent(targetUrl)}`;
+};
 
 /**
  * Sends one request through the desktop bridge. Returns null, without sending anything, when

@@ -4,7 +4,7 @@
 export const isCapacitorAndroid = (): boolean => {
     if (typeof window === 'undefined') return false;
     const capacitor = (window as unknown as {
-        Capacitor?: { getPlatform?: () => string; isNativePlatform?: () => boolean };
+        Capacitor?: { getPlatform?: () => string };
     }).Capacitor;
-    return capacitor?.getPlatform?.() === 'android' || capacitor?.isNativePlatform?.() === true;
+    return capacitor?.getPlatform?.() === 'android';
 };

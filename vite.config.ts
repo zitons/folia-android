@@ -134,7 +134,7 @@ function devLyricProxyPlugin() {
   };
 }
 
-export default async function viteConfig(_config: ConfigEnv): Promise<UserConfig> {
+export default async function viteConfig(config: ConfigEnv): Promise<UserConfig> {
   let commitHash = '';
   if (process.env.VERCEL_GIT_COMMIT_SHA) {
     commitHash = process.env.VERCEL_GIT_COMMIT_SHA.substring(0, 7);
@@ -189,7 +189,7 @@ export default async function viteConfig(_config: ConfigEnv): Promise<UserConfig
   const buildCommit = normalizeBuildCommit(commitHash);
   // 官方 / 自部署 / 非官方：设置里的版本号、扫码诊断报告和反馈入口都会读它
   // 开发服务器可以用 FOLIA_DEV_BUILD_KIND 钉住（Playwright 用）；vite build 不认这个变量。
-  const buildKind = resolveDevBuildKindOverride(_config.command, process.env) ?? resolveBuildKind(process.env);
+  const buildKind = resolveDevBuildKindOverride(config.command, process.env) ?? resolveBuildKind(process.env);
 
   const appVersionLabel = process.env.APP_VERSION_LABEL?.trim() || 'Realeco';
   const appReleaseChannel = process.env.APP_RELEASE_CHANNEL?.trim().toLowerCase() || 'realeco';
@@ -285,6 +285,7 @@ export default async function viteConfig(_config: ConfigEnv): Promise<UserConfig
       legacyMediaQueriesAssetsPlugin(),
       react(),
       VitePWA({
+        disable: config.mode === 'ios',
         registerType: 'autoUpdate',
         includeAssets: ['icon.svg'],
         devOptions: {
