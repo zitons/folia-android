@@ -7,6 +7,9 @@
   "android": {
     "allowMixedContent": true
   },
+  "ios": {
+    "includePlugins": ["@capacitor/browser", "@capacitor/filesystem", "@capacitor/splash-screen"]
+  },
   "server": {
     "androidScheme": "https",
     "hostname": "localhost",

@@ -21,7 +21,7 @@ export const PictureChoice = <T extends string>({ value, options, onChange, disa
     const reduced = useKitReducedMotion();
 
     return (
-        <div role="group" {...useRowAria()} aria-disabled={disabled || undefined} className={`flex max-w-full flex-wrap justify-end gap-3 py-1${disabled ? ' pointer-events-none opacity-40' : ''}`}>
+        <div role="group" {...useRowAria()} aria-disabled={disabled || undefined} className={`st-picture-choice flex max-w-full flex-wrap justify-end gap-3 py-1${disabled ? ' pointer-events-none opacity-40' : ''}`}>
             {options.map(option => {
                 const selected = option.value === value;
                 return (
@@ -35,7 +35,7 @@ export const PictureChoice = <T extends string>({ value, options, onChange, disa
                         }}
                         className="group flex min-w-24 max-w-[136px] flex-col items-center gap-1.5 rounded-lg"
                     >
-                        <span className="relative block h-16 w-24">
+                        <span className="relative block aspect-[3/2] w-full max-w-24">
                             <span
                                 aria-hidden
                                 className={`st-t-fast absolute inset-0 overflow-hidden rounded-lg bg-[var(--st-pv)] shadow-[inset_0_0_0_1px_var(--st-line)] transition-opacity ${selected ? '' : 'opacity-70 group-hover:opacity-100'}`}
@@ -53,7 +53,7 @@ export const PictureChoice = <T extends string>({ value, options, onChange, disa
                                 />
                             )}
                         </span>
-                        <span className={`st-t-fast max-w-full text-center text-xs leading-4 transition-colors ${selected ? 'text-[color:var(--st-t1)]' : 'text-[color:var(--st-t2)] group-hover:text-[color:var(--st-t1)]'}`}>
+                        <span className={`st-t-fast max-w-full text-center text-xs leading-4 wrap-anywhere transition-colors ${selected ? 'text-[color:var(--st-t1)]' : 'text-[color:var(--st-t2)] group-hover:text-[color:var(--st-t1)]'}`}>
                             {option.label}
                         </span>
                     </button>

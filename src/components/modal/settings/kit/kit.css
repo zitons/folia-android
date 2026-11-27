@@ -42,6 +42,30 @@
     opacity: 0.4;
 }
 
+/* Give picture choices their own line when the row is too narrow for label and cards. */
+.st-row:has(.st-picture-choice) {
+    container: settings-picture-row / inline-size;
+}
+
+@container settings-picture-row (max-width: 420px) {
+    .st-row > div:has(> .st-picture-choice) {
+        flex-basis: 100%;
+        min-width: 0;
+        margin-inline-start: 0;
+    }
+
+    .st-picture-choice {
+        display: grid;
+        width: 100%;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 4.5rem), 1fr));
+    }
+
+    .st-picture-choice > button {
+        min-width: 0;
+        max-width: none;
+    }
+}
+
 /* ---- transitions of the vocabulary, beside a Tailwind transition-* class that names the properties */
 .st-t-fast {
     transition-duration: var(--st-dur-fast);

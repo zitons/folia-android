@@ -5,16 +5,37 @@ on:
     paths:
       - 'ios/**'
       - '.github/workflows/ios-build.yml'
+      - 'src/**'
+      - 'sources/**'
+      - 'packages/**'
+      - 'public/**'
+      - 'assets/**'
+      - 'build/**'
+      - 'dev/**'
+      - '.npmrc'
+      - '.nvmrc'
+      - 'capacitor.config.json'
+      - 'index.html'
+      - 'package*.json'
+      - 'tsconfig*.json'
+      - 'vite.config.ts'
   pull_request:
     paths:
       - 'ios/**'
       - '.github/workflows/ios-build.yml'
       - 'src/**'
       - 'sources/**'
+      - 'packages/**'
       - 'public/**'
+      - 'assets/**'
+      - 'build/**'
+      - 'dev/**'
+      - '.npmrc'
+      - '.nvmrc'
       - 'capacitor.config.json'
       - 'index.html'
       - 'package*.json'
+      - 'tsconfig*.json'
       - 'vite.config.ts'
   workflow_dispatch:
 
@@ -62,3 +83,26 @@ jobs:
           name: Folia-iOS-unsigned
           path: ${{ runner.temp }}/Folia-iOS-unsigned.ipa
           if-no-files-found: error
+          overwrite: true
+
+  release:
+    if: github.repository == 'zitons/folia-android' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: Folia-iOS-unsigned
+      - name: Publish unsigned IPA to GitHub Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="ios-build-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}"
+          gh release create "$tag" Folia-iOS-unsigned.ipa \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --latest=false \
+            --title "Folia iOS Build ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}" \
+            --notes "Unsigned iPhone IPA built from ${GITHUB_SHA}. Signing is required for installation on standard iPhones."
