@@ -5,13 +5,13 @@
 <div align="center">
 <a href="https://trendshift.io/repositories/71740?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-71740" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/repositories/71740" alt="chthollyphile%2Ffolia-major | Trendshift" width="250" height="55"/></a>
 
-# Folia for Android
+# Folia for iOS
 
 Lyrics Reimagined // 辞曲新境
 
 [简体中文](README.md) | English
 
-[![GitHub release](https://img.shields.io/github/v/release/chthollyphile/folia-major?label=release)](https://github.com/whycfawa/folia-android/releases)
+[Download the iOS IPA](https://github.com/zitons/folia-android/releases)
 [![GitHub stars](https://img.shields.io/github/stars/chthollyphile/folia-major?style=social)](https://github.com/whycfawa/folia-android/stargazers)
 [![All Contributors](https://img.shields.io/badge/all_contributors-35-orange.svg?style=flat-square)](CONTRIBUTORS.md)
 
@@ -22,10 +22,10 @@ Lyrics Reimagined // 辞曲新境
 </div>
 
 > [!IMPORTANT]
-> **This repository is an unofficial Android port of Folia and is not affiliated with the upstream author.**
+> **This repository is an unofficial iOS port of Folia for Android.**
 >
+> - Android port: [whycfawa/folia-android](https://github.com/whycfawa/folia-android)
 > - Upstream project: [chthollyphile/folia-major](https://github.com/chthollyphile/folia-major)
-> - This repository is an Android port and maintenance fork of the upstream project, with a Capacitor Android container, platform bridge, background playback, lock-screen media controls, local music, and other Android features.
 > - This repository remains licensed under the upstream project's **AGPL-3.0** license. Third-party components and notices are listed in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
 ## About
@@ -35,7 +35,8 @@ Folia is an online music player built around full-screen, immersive lyrics. It s
 ## Quick download
 
 > [!TIP]
-> - **GitHub**: [Latest Release](https://github.com/whycfawa/folia-android/releases)
+> - **iOS**: [Unsigned IPA](https://github.com/zitons/folia-android/releases)
+> - **Android**: [Original releases](https://github.com/whycfawa/folia-android/releases)
 
 ## Showcase
 

@@ -5,13 +5,13 @@
 <div align="center">
 <a href="https://trendshift.io/repositories/71740?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-71740" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/repositories/71740" alt="chthollyphile%2Ffolia-major | Trendshift" width="250" height="55"/></a>
 
-# Folia for Android
+# Folia for iOS
 
 Lyrics Reimagined // 辞曲新境
 
 简体中文 | [English](README.en.md)
 
-[![GitHub release](https://img.shields.io/github/v/release/chthollyphile/folia-major?label=release)](https://github.com/whycfawa/folia-android/releases)
+[iOS IPA 下载](https://github.com/zitons/folia-android/releases)
 [![GitHub stars](https://img.shields.io/github/stars/chthollyphile/folia-major?style=social)](https://github.com/whycfawa/folia-android/stargazers)
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
 [![All Contributors](https://img.shields.io/badge/all_contributors-35-orange.svg?style=flat-square)](CONTRIBUTORS.md)
@@ -24,10 +24,10 @@ Lyrics Reimagined // 辞曲新境
 </div>
 
 > [!IMPORTANT]
-> **本仓库是 Folia 的非官方 Android 移植 fork，与上游作者无关。**
+> **这是 Folia Android 版的非官方 iOS 移植。**
 >
+> - Android 版：[whycfawa/folia-android](https://github.com/whycfawa/folia-android)
 > - 上游项目：[chthollyphile/folia-major](https://github.com/chthollyphile/folia-major)
-> - 本仓库基于上游项目进行 Android 移植和维护，包含 Capacitor Android 容器、平台桥、后台播放、锁屏媒体控制与本地音乐等 Android 功能。
 > - 本仓库仍按上游项目的 **AGPL-3.0** 许可证发布，第三方组件与许可见 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)。
 
 ## 项目简介
@@ -38,7 +38,8 @@ Folia是一个以全屏沉浸式歌词播放为核心的在线音乐播放器，
 ## 快速下载
 
 > [!TIP]
-> - **GitHub**：[Latest Release](https://github.com/whycfawa/folia-android/releases)
+> - **iOS**：[未签名 IPA](https://github.com/zitons/folia-android/releases)
+> - **Android**：[原版发布页](https://github.com/whycfawa/folia-android/releases)
 
 ## 展示
 
