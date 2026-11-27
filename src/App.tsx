@@ -1442,6 +1442,7 @@ export default function App() {
         // named one song and counted another. `audioSrc` moves with the element or the guard fails
         // for the whole blend and the panel stops updating instead.
         getDisplayAudioElement: automix.getDisplayElement,
+        seekDuringTransition,
         audioSrc: automix.tailSrc ?? audioSrc,
         currentSong: displaySong,
         cachedCoverUrl: displayCoverUrl ?? cachedCoverUrl,

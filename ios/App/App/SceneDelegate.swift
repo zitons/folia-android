@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import AVFAudio
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     var window: UIWindow?
@@ -26,6 +27,11 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 private final class MusicBridgeViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         super.capacitorDidLoad()
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback)
+        } catch {
+            NSLog("Folia could not configure the playback audio session: %@", error.localizedDescription)
+        }
         bridge?.registerPluginInstance(FoliaSourceHTTP())
     }
 }

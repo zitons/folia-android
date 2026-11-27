@@ -27,6 +27,7 @@ export type UseMediaSessionBridgeOptions = {
      * song's name over another song's progress. `audioSrc` is passed to match this element.
      */
     getDisplayAudioElement?: () => HTMLAudioElement | null;
+    seekDuringTransition?: (time: number) => boolean;
     audioSrc: string | null;
     currentSong: SongResult | null;
     cachedCoverUrl: string | null;
@@ -43,6 +44,7 @@ export type UseMediaSessionBridgeOptions = {
 export const useMediaSessionBridge = ({
     audioRef,
     getDisplayAudioElement,
+    seekDuringTransition,
     audioSrc,
     currentSong,
     cachedCoverUrl,
@@ -214,6 +216,20 @@ export const useMediaSessionBridge = ({
         audio.addEventListener('playing', publish);
         const audioStateEvents = ['emptied', 'loadedmetadata', 'durationchange', 'playing', 'pause', 'ended', 'error', 'seeked', 'ratechange'];
         if (followsAudioState) {
+            try {
+                navigator.mediaSession.setActionHandler('seekto', ({ seekTime, fastSeek }) => {
+                    if (!deck || seekTime === undefined || !Number.isFinite(seekTime)
+                        || isNowPlayingControlDisabledRef.current
+                        || !isMediaSessionSourceReady(deck, expectedSource, document.baseURI)) return;
+
+                    const position = Math.max(0, Math.min(deck.duration, seekTime));
+                    if (seekDuringTransition?.(position)) return;
+                    if (fastSeek && typeof deck.fastSeek === 'function') deck.fastSeek(position);
+                    else deck.currentTime = position;
+                });
+            } catch (e) {
+                console.warn('[MediaSession] Failed to bind seek handler', e);
+            }
             audioStateEvents.forEach(event => audio.addEventListener(event, syncAudioState));
             document.addEventListener('visibilitychange', syncAudioState);
             window.addEventListener('pageshow', syncAudioState);
@@ -228,13 +244,18 @@ export const useMediaSessionBridge = ({
             audio.removeEventListener('durationchange', publish);
             audio.removeEventListener('playing', publish);
             if (followsAudioState) {
+                try {
+                    navigator.mediaSession.setActionHandler('seekto', null);
+                } catch {
+                    // Some WebKit versions do not expose this action.
+                }
                 audioStateEvents.forEach(event => audio.removeEventListener(event, syncAudioState));
                 document.removeEventListener('visibilitychange', syncAudioState);
                 window.removeEventListener('pageshow', syncAudioState);
             }
             if (disposableArtworkUrl) URL.revokeObjectURL(disposableArtworkUrl);
         };
-    }, [audioRef, audioSrc, cachedCoverUrl, currentSong, followsAudioState, getDisplayAudioElement, hifiTrackKey, playbackRoute, unknownArtistLabel]);
+    }, [audioRef, audioSrc, cachedCoverUrl, currentSong, followsAudioState, getDisplayAudioElement, hifiTrackKey, isNowPlayingControlDisabledRef, playbackRoute, seekDuringTransition, unknownArtistLabel]);
 
     useEffect(() => {
         if (followsAudioState || !('mediaSession' in navigator)) {

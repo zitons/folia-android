@@ -166,6 +166,7 @@ describe('Media Session playback routes', () => {
     it('publishes iOS deck state and progress even when the store reports paused', () => {
         const platform = vi.spyOn(Capacitor, 'getPlatform').mockReturnValue('ios');
         const source = 'https://example.com/audio.mp3';
+        const seekDuringTransition = vi.fn(() => false);
         const deck = Object.assign(new EventTarget(), {
             currentTime: 0, duration: 200, readyState: 1, currentSrc: source,
             playbackRate: 1, paused: true, ended: false,
@@ -174,6 +175,7 @@ describe('Media Session playback routes', () => {
             useMediaSessionBridge({
                 audioRef: { current: deck as unknown as HTMLAudioElement },
                 audioSrc: source,
+                seekDuringTransition,
                 currentSong: navidromeSong,
                 cachedCoverUrl: null,
                 playerState: PlayerState.PAUSED,
@@ -193,7 +195,14 @@ describe('Media Session playback routes', () => {
             Object.assign(deck, { paused: false, currentTime: 12 });
             deck.dispatchEvent(new Event('playing'));
             expect(mediaSession.playbackState).toBe('playing');
-            deck.currentTime = 60;
+            const seek = mediaSession.setActionHandler.mock.calls.find(([action]) => action === 'seekto')?.[1];
+            expect(seek).toBeTypeOf('function');
+            seek({ seekTime: 60 });
+            expect(deck.currentTime).toBe(60);
+            seekDuringTransition.mockReturnValueOnce(true);
+            seek({ seekTime: 80 });
+            expect(seekDuringTransition).toHaveBeenLastCalledWith(80);
+            expect(deck.currentTime).toBe(60);
             deck.dispatchEvent(new Event('seeked'));
             expect(mediaSession.setPositionState).toHaveBeenLastCalledWith({ duration: 200, playbackRate: 1, position: 60 });
             deck.paused = true;
