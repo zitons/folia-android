@@ -1,6 +1,6 @@
 # Folia iOS 构建
 
-GitHub Actions 的 **Build iOS** 使用 `macos-26` 和仓库指定的 Node 版本。App 面向 iOS 16.4 及以上。将 workflow 放到 fork 的默认分支后，可以在 **Actions → Build iOS → Run workflow** 手动构建。涉及 iOS 工程的 push 和相关 PR 也会触发构建。
+GitHub Actions 的 **Build iOS** 使用 `macos-26` 和仓库指定的 Node 版本。App 面向 iOS 16.4 及以上。分支 push 和 PR 会触发构建。将 workflow 放到 fork 的默认分支后，可以在 **Actions → Build iOS → Run workflow** 手动构建。
 
 在 `zitons/folia-android` 中，由 push 或手动运行触发的每次成功构建都会将 `Folia-iOS-unsigned.ipa` 发布到 GitHub Releases。标签格式为 `ios-build-<运行编号>-<重试编号>`。PR 构建的 IPA 可以在运行详情的 **Artifacts** 下载。构建无需 Apple 证书或仓库 Secrets。在普通 iPhone 上安装前需要自行签名。
 
