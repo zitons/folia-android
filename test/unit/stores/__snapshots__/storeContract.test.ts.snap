@@ -48,6 +48,7 @@ exports[`store contract > keeps every localStorage key the stores read or write 
   "folia_hifi_navidrome",
   "folia_hifi_software_volume",
   "folia_hifi_volume_confirmed",
+  "folia_ios_source_preferences",
   "folia_last_seen_ponder_onboarding_version",
   "folia_media_cache_limit_gb",
   "folia_navidrome_last_section",

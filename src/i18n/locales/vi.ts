@@ -2,6 +2,14 @@
 
 export default {
   "sourcesSettings": {
+    "iosConnection": "Kết nối nguồn nhạc",
+    "iosMode": "Chế độ API",
+    "iosModeHint": "Để trống địa chỉ để dùng mặc định của bản dựng. Hãy đăng nhập qua dịch vụ bạn tin cậy. Khi đổi địa chỉ, bạn cần đăng nhập lại.",
+    "iosNative": "Cầu nối tích hợp",
+    "iosExternal": "API bên ngoài",
+    "iosApply": "Lưu và tải lại",
+    "iosInvalidUrl": "Nhập địa chỉ HTTPS hợp lệ. Có thể thêm đường dẫn.",
+    "iosSaveFailed": "Không thể lưu. Hãy thử lại.",
     "groupList": "Nguồn",
     "groupNotices": "Tiếp quản và thay thế",
     "groupInstall": "Cài đặt",

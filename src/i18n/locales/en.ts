@@ -2,6 +2,14 @@
 
 export default {
   "sourcesSettings": {
+    "iosConnection": "Source connection",
+    "iosMode": "API mode",
+    "iosModeHint": "Leave an address blank to use the build default. Use a service you trust for sign-in. Changing the address requires signing in again.",
+    "iosNative": "Built-in bridge",
+    "iosExternal": "External API",
+    "iosApply": "Save and reload",
+    "iosInvalidUrl": "Enter a valid HTTPS address. A path is allowed.",
+    "iosSaveFailed": "Could not save. Try again.",
     "groupList": "Sources",
     "groupNotices": "Takeovers and overrides",
     "groupInstall": "Install",

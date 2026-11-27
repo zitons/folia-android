@@ -99,6 +99,7 @@ export const SETTINGS_NAV_GROUP_SPECS: GroupSpec[] = [
 ];
 
 import { IS_ANDROID_WEBVIEW } from '../../../../utils/platform';
+import { isCapacitorIos } from '../../../../platform/runtime';
 
 /** Resolves the grouping into translated nav items, dropping desktop-only sections (and groups left empty) on web. */
 export const buildSettingsNavGroups = (t: Translate, options: { isElectron: boolean }): SettingsNavGroup[] => (
@@ -110,6 +111,7 @@ export const buildSettingsNavGroups = (t: Translate, options: { isElectron: bool
                 // mods 与 AI 服务在安卓壳里也有（同一个 bundle，能力探测决定）：安卓用直连密钥，桌面走主进程。
                 .filter(section => !section.electronOnly
                     || options.isElectron
+                    || (section.id === 'sources' && isCapacitorIos())
                     || ((section.id === 'mods' || section.id === 'ai') && IS_ANDROID_WEBVIEW))
                 .map(section => ({
                     id: section.id,

@@ -28,6 +28,7 @@ import { requestFoliaExtension, type FoliaBridgeProvider } from '../../foliaExte
 import { requestYtmOnAndroid } from '../ytm/android/ytmAndroidBridge';
 import { androidBridgeBase, installAndroidBridgeFetch } from './androidBridgeFetch';
 import { registerFoliumWebSource, unregisterFoliumWebSource } from './foliumWebSource';
+import { scopeIosNativeSource } from './iosWebSource';
 import { registerLxMusic, unregisterLxMusic } from './androidLx';
 import builtinModPackages from 'virtual:folia-builtin-mods';
 import { readBuiltinModEnabled } from '../../../mods/android/androidModPrefs';
@@ -117,14 +118,14 @@ const passthroughRelay = (url: string): string => url;
 /** 网易云：KuGouMusicApi 式的 apiBase 换成本地桥。 */
 const registerNetease = (): string[] => registerFoliumWebSource({
     package: neteasePackage,
-    create: env => createNeteaseSource({ ...env, web: { apiBase: androidBridgeBase('netease') } }),
+    create: env => createNeteaseSource({ ...scopeIosNativeSource(env), web: { apiBase: androidBridgeBase('netease') } }),
 });
 
 /** 酷狗：同一条桥，另外它要 md5（登录参数）与封面地址改写。 */
 const registerKugou = (): string[] => registerFoliumWebSource({
     package: kugouPackage,
     create: env => createKugouSource({
-        ...env,
+        ...scopeIosNativeSource(env),
         web: { apiBase: androidBridgeBase('kugou'), md5: (text: string) => md5(text), relayUrl: passthroughRelay },
     }),
     proxiedCoverHosts: KUGOU_COVER_HOSTS,
@@ -134,7 +135,7 @@ const registerKugou = (): string[] => registerFoliumWebSource({
 const registerQq = (): string[] => registerFoliumWebSource({
     package: qqPackage,
     create: env => createQqSource({
-        ...env,
+        ...scopeIosNativeSource(env),
         web: { apiBase: androidBridgeBase('qq'), relayUrl: passthroughRelay },
     }),
     proxiedCoverHosts: PROXIED_COVER_HOSTS,
@@ -241,6 +242,18 @@ const ANDROID_SOURCE_REGISTRARS: ReadonlyArray<readonly [string, () => string[]]
     ['fnmusic', registerFnMusic],
     ['lxmusic', registerLxMusic],
 ];
+
+export const registerIosHttpSources = (): string[] => {
+    installAndroidBridgeFetch();
+    return [registerNetease, registerKugou, registerQq, registerBodian].flatMap(register => {
+        try {
+            return register();
+        } catch (error) {
+            console.warn(`[Sources] iOS: ${register.name} could not be registered`, error);
+            return [];
+        }
+    });
+};
 
 /** 目录名（音源短 id）→ 模组 id。Apple Music 的目录叫 appleMusic、模组 id 是 apple-music。 */
 const modIdOfSource = new Map<string, string>(

@@ -3,6 +3,7 @@ import source from 'virtual:folia-source/kugou';
 import { COVER_HOSTS, createSource } from '../../../../sources/kugou/core';
 import { lyricProxyWebUrl } from '../../lyricProxy';
 import { registerFoliumWebSource } from './foliumWebSource';
+import { resolveWebSourceConnection } from './iosWebSource';
 
 // src/services/onlineMusic/web/kugou.ts
 // The web build's source of this platform (web/index.ts): the core's createSource with the web's pieces, registered
@@ -19,6 +20,9 @@ const getWebApiBase = (): string => (
 /** Registers the source on the web; hands back its host ids. */
 export const registerWebSource = (): string[] => registerFoliumWebSource({
     package: source,
-    create: env => createSource({ ...env, web: { apiBase: getWebApiBase(), md5: text => md5(text), relayUrl: lyricProxyWebUrl } }),
+    create: env => {
+        const connection = resolveWebSourceConnection(env, 'kugou', getWebApiBase());
+        return createSource({ ...connection.env, web: { apiBase: connection.apiBase, md5: text => md5(text), relayUrl: lyricProxyWebUrl } });
+    },
     proxiedCoverHosts: COVER_HOSTS,
 });

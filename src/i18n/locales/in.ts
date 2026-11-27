@@ -2,6 +2,14 @@
 
 export default {
   "sourcesSettings": {
+    "iosConnection": "Koneksi sumber musik",
+    "iosMode": "Mode API",
+    "iosModeHint": "Kosongkan alamat untuk memakai bawaan build. Gunakan layanan tepercaya untuk masuk. Jika alamat berubah, masuk kembali.",
+    "iosNative": "Jembatan bawaan",
+    "iosExternal": "API eksternal",
+    "iosApply": "Simpan dan muat ulang",
+    "iosInvalidUrl": "Masukkan alamat HTTPS yang valid. Path diperbolehkan.",
+    "iosSaveFailed": "Gagal menyimpan. Coba lagi.",
     "groupList": "Sumber",
     "groupNotices": "Pengambilalihan dan penggantian",
     "groupInstall": "Pasang",

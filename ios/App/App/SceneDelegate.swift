@@ -23,8 +23,15 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 }
 
+private final class MusicBridgeViewController: CAPBridgeViewController {
+    override func capacitorDidLoad() {
+        super.capacitorDidLoad()
+        bridge?.registerPluginInstance(FoliaSourceHTTP())
+    }
+}
+
 private final class SafeAreaViewController: UIViewController {
-    private let bridgeController = CAPBridgeViewController()
+    private let bridgeController = MusicBridgeViewController()
 
     override func viewDidLoad() {
         super.viewDidLoad()

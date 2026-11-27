@@ -1,5 +1,30 @@
 // src/services/nativeRemoteAudio.ts
-// Routes signed Kuwo/Bodian URLs through the Android Range-capable local stream server.
+// Routes Kuwo/Bodian and other provider audio through a native fallback when needed.
+
+import { isCapacitorIos } from '../platform/runtime';
+import { readIosSourcePreferences } from '../stores/iosSourcePreferences';
+
+const webFetch = globalThis.fetch.bind(globalThis);
+
+const canReadAudioInWebView = async (url: string): Promise<boolean> => {
+    if (!url.startsWith('https:')) return false;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2_500);
+    try {
+        // Use the original fetch so the native API shim cannot mask a CDN CORS failure.
+        const response = await webFetch(url, {
+            headers: { Range: 'bytes=0-0' },
+            credentials: 'omit',
+            signal: controller.signal,
+        });
+        void response.body?.cancel().catch(() => undefined);
+        return response.ok;
+    } catch {
+        return false;
+    } finally {
+        clearTimeout(timer);
+    }
+};
 
 /**
  * 酷狗 0.8.0 的音源把播放地址强制改成了 https；`fs.*.kugou.com` 的证书链在部分安卓 WebView/OkHttp
@@ -22,7 +47,9 @@ export const proxyNativeRemoteAudioUrl = async (url: string): Promise<string> =>
     if (!url || typeof window === 'undefined') return url;
     const plugin = (window as any).Capacitor?.Plugins?.FoliaNative;
     if (!plugin?.registerRemoteAudio) return url;
-    const target = kugouHttpPlaybackUrl(url);
+    const ios = isCapacitorIos();
+    if (ios && (!/^https?:/i.test(url) || readIosSourcePreferences().mode !== 'native' || await canReadAudioInWebView(url))) return url;
+    const target = ios ? url : kugouHttpPlaybackUrl(url);
     try {
         const result = await plugin.registerRemoteAudio({ url: target });
         return typeof result?.url === 'string' && result.url ? result.url : url;
