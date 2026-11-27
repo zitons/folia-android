@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SongResult } from '@/types';
 import { PlayerState } from '@/types';
+import { Capacitor } from '@capacitor/core';
 
 // test/unit/hifi/hifiObserverRebinding.test.ts
 // 只观察播放的模块换到 HiFi 媒体 shim：同一首歌、只换了路线（接管窗口重建前的播放、回落 Web）时也要跟过去。
@@ -109,7 +110,7 @@ describe('Navidrome scrobble on the HiFi route', () => {
     });
 });
 
-describe('Media Session on the HiFi route', () => {
+describe('Media Session playback routes', () => {
     const mediaSession = {
         metadata: null as unknown,
         playbackState: 'none',
@@ -160,5 +161,56 @@ describe('Media Session on the HiFi route', () => {
         hifiMediaShim.setDuration(200);
         expect(mediaSession.setPositionState).toHaveBeenLastCalledWith({ duration: 200, playbackRate: 1, position: 12 });
         expect(mediaSession.metadata).toMatchObject({ title: 'Remote', artist: 'Artist', album: 'Album' });
+    });
+
+    it('publishes iOS deck state and progress even when the store reports paused', () => {
+        const platform = vi.spyOn(Capacitor, 'getPlatform').mockReturnValue('ios');
+        const source = 'https://example.com/audio.mp3';
+        const deck = Object.assign(new EventTarget(), {
+            currentTime: 0, duration: 200, readyState: 1, currentSrc: source,
+            playbackRate: 1, paused: true, ended: false,
+        });
+        function Probe() {
+            useMediaSessionBridge({
+                audioRef: { current: deck as unknown as HTMLAudioElement },
+                audioSrc: source,
+                currentSong: navidromeSong,
+                cachedCoverUrl: null,
+                playerState: PlayerState.PAUSED,
+                isNowPlayingStageActive: false,
+                unknownArtistLabel: 'Unknown',
+                mediaSessionPlayRef: { current: async () => undefined },
+                mediaSessionPauseRef: { current: () => undefined },
+                mediaSessionPrevRef: { current: () => undefined },
+                mediaSessionNextRef: { current: () => undefined },
+                isNowPlayingControlDisabledRef: { current: false },
+            });
+            return null;
+        }
+        try {
+            render(React.createElement(Probe));
+            expect(mediaSession.playbackState).toBe('paused');
+            Object.assign(deck, { paused: false, currentTime: 12 });
+            deck.dispatchEvent(new Event('playing'));
+            expect(mediaSession.playbackState).toBe('playing');
+            deck.currentTime = 60;
+            deck.dispatchEvent(new Event('seeked'));
+            expect(mediaSession.setPositionState).toHaveBeenLastCalledWith({ duration: 200, playbackRate: 1, position: 60 });
+            deck.paused = true;
+            document.dispatchEvent(new Event('visibilitychange'));
+            expect(mediaSession.playbackState).toBe('paused');
+            deck.paused = false;
+            deck.dispatchEvent(new Event('playing'));
+            expect(mediaSession.playbackState).toBe('playing');
+            Object.assign(deck, { error: { code: 2 } });
+            deck.dispatchEvent(new Event('error'));
+            expect(mediaSession.playbackState).toBe('paused');
+            Object.assign(deck, { paused: false, readyState: 0, currentSrc: '' });
+            deck.dispatchEvent(new Event('emptied'));
+            expect(mediaSession.playbackState).toBe('paused');
+            expect(mediaSession.setPositionState).toHaveBeenLastCalledWith();
+        } finally {
+            platform.mockRestore();
+        }
     });
 });

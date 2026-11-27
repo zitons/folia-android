@@ -1,9 +1,11 @@
 import { useEffect } from 'react';
 import type { RefObject } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { PlayerState } from '../types';
 import type { SongResult } from '../types';
 import { getSongAlbumLabel, getSongArtistLabel, getSongCoverUrl } from '../services/onlineMusic/songMetadata';
 import {
+    createMediaSessionPositionState,
     getSupportedMediaSessionArtworkUrl,
     isMediaSessionSourceReady,
     publishMediaSessionTrack,
@@ -57,6 +59,9 @@ export const useMediaSessionBridge = ({
     // source (one per HiFi track) stands in for `audioSrc`, which is null there.
     const playbackRoute = usePlaybackStore(state => state.playbackRoute);
     const hifiTrackKey = useHifiTrackStore(state => state.current?.trackKey ?? null);
+    const followsAudioState = Capacitor.getPlatform() === 'ios'
+        && playbackRoute === 'web'
+        && !isNowPlayingStageActive;
 
     useEffect(() => {
         if (!('mediaSession' in navigator)) {
@@ -121,6 +126,7 @@ export const useMediaSessionBridge = ({
 
         if (!currentSong) {
             try {
+                if (followsAudioState) navigator.mediaSession.playbackState = 'none';
                 navigator.mediaSession.setPositionState();
                 navigator.mediaSession.metadata = null;
             } catch (e) {
@@ -131,11 +137,27 @@ export const useMediaSessionBridge = ({
 
         // The displayed track's own deck, so the position published below belongs to the title
         // published beside it. Falls back to the active deck whenever no blend is holding a picture.
-        const audio = getObservedMedia(getDisplayAudioElement?.() ?? audioRef.current);
+        const deck = getDisplayAudioElement?.() ?? audioRef.current;
+        const audio = getObservedMedia(deck);
         // The shim switched to this track before the track store named it, so its source is current here.
         // On every non-web route (mpv, the provider's own player) that is its shim's source, not a URL.
         const expectedSource = playbackRoute === 'web' ? audioSrc : getObservedMedia(null)?.currentSrc;
+        const syncAudioState = () => {
+            try {
+                if (!audio || !expectedSource || !isMediaSessionSourceReady(audio, expectedSource, document.baseURI)) {
+                    navigator.mediaSession.playbackState = 'paused';
+                    navigator.mediaSession.setPositionState?.();
+                    return;
+                }
+                navigator.mediaSession.playbackState = audio.paused || audio.ended || deck?.error ? 'paused' : 'playing';
+                const position = createMediaSessionPositionState(audio);
+                if (position) navigator.mediaSession.setPositionState(position);
+            } catch (e) {
+                console.warn('[MediaSession] Failed to synchronize audio state', e);
+            }
+        };
         if (!audio || !expectedSource) {
+            if (followsAudioState) syncAudioState();
             return;
         }
 
@@ -190,6 +212,13 @@ export const useMediaSessionBridge = ({
         audio.addEventListener('durationchange', publish);
         // Re-publish after playback starts in case Chromium delivered a late clear from the old source.
         audio.addEventListener('playing', publish);
+        const audioStateEvents = ['emptied', 'loadedmetadata', 'durationchange', 'playing', 'pause', 'ended', 'error', 'seeked', 'ratechange'];
+        if (followsAudioState) {
+            audioStateEvents.forEach(event => audio.addEventListener(event, syncAudioState));
+            document.addEventListener('visibilitychange', syncAudioState);
+            window.addEventListener('pageshow', syncAudioState);
+            syncAudioState();
+        }
         publish();
         void prepareUnsupportedArtwork();
 
@@ -198,12 +227,17 @@ export const useMediaSessionBridge = ({
             audio.removeEventListener('loadedmetadata', publish);
             audio.removeEventListener('durationchange', publish);
             audio.removeEventListener('playing', publish);
+            if (followsAudioState) {
+                audioStateEvents.forEach(event => audio.removeEventListener(event, syncAudioState));
+                document.removeEventListener('visibilitychange', syncAudioState);
+                window.removeEventListener('pageshow', syncAudioState);
+            }
             if (disposableArtworkUrl) URL.revokeObjectURL(disposableArtworkUrl);
         };
-    }, [audioRef, audioSrc, cachedCoverUrl, currentSong, getDisplayAudioElement, hifiTrackKey, playbackRoute, unknownArtistLabel]);
+    }, [audioRef, audioSrc, cachedCoverUrl, currentSong, followsAudioState, getDisplayAudioElement, hifiTrackKey, playbackRoute, unknownArtistLabel]);
 
     useEffect(() => {
-        if (!('mediaSession' in navigator)) {
+        if (followsAudioState || !('mediaSession' in navigator)) {
             return;
         }
 
@@ -216,5 +250,5 @@ export const useMediaSessionBridge = ({
         } catch (e) {
             console.warn('[MediaSession] Failed to update playback state', e);
         }
-    }, [currentSong, isNowPlayingStageActive, playerState]);
+    }, [currentSong, followsAudioState, isNowPlayingStageActive, playerState]);
 };
