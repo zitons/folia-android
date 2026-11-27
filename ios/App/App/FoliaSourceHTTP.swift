@@ -5,8 +5,9 @@ import Foundation
 final class FoliaSourceHTTP: CAPPlugin, CAPBridgedPlugin {
     let identifier = "FoliaSourceHTTP"
     let jsName = "FoliaNative"
-    let pluginMethods = [
+    let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "httpRequest", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "registerRemoteAudio", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "cookiesGetBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "cookiesSet", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "cookiesRemove", returnType: CAPPluginReturnPromise),
@@ -19,6 +20,9 @@ final class FoliaSourceHTTP: CAPPlugin, CAPBridgedPlugin {
         "github.com", "api.github.com", "gh-proxy.org",
     ]
     private let cookies = HTTPCookieStorage.shared
+    private static let audioLimit: Int64 = 64 * 1024 * 1024
+    private static let audioDirectory = FileManager.default.temporaryDirectory.appendingPathComponent("FoliaSourceAudio")
+    private static let audioCacheQueue = DispatchQueue(label: "FoliaSourceAudio")
 
     fileprivate static func isAllowedHost(_ host: String) -> Bool {
         hosts.contains { host == $0 || host.hasSuffix("." + $0) }
@@ -34,6 +38,73 @@ final class FoliaSourceHTTP: CAPPlugin, CAPBridgedPlugin {
         }
         guard parsed.scheme?.lowercased() == "https", parsed.port == nil || parsed.port == 443 else { return nil }
         return parsed.url
+    }
+
+    @objc func registerRemoteAudio(_ call: CAPPluginCall) {
+        guard let url = Self.secureURL(call.getString("url") ?? ""), let bridge else {
+            call.reject("The audio destination is unavailable in the iOS music bridge")
+            return
+        }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.timeoutIntervalForRequest = 12
+        configuration.timeoutIntervalForResource = 30
+        configuration.httpCookieStorage = nil
+        configuration.httpShouldSetCookies = false
+        let redirects = SourceRedirectPolicy(mode: "follow", downloadLimit: Self.audioLimit)
+        let session = URLSession(configuration: configuration, delegate: redirects, delegateQueue: nil)
+        var request = URLRequest(url: url)
+        if url.host?.hasSuffix(".kuwo.cn") == true {
+            request.setValue("https://www.kuwo.cn/", forHTTPHeaderField: "Referer")
+        } else if url.host?.hasSuffix(".music.126.net") == true {
+            request.setValue("https://music.163.com/", forHTTPHeaderField: "Referer")
+        }
+        session.downloadTask(with: request) { temporaryFile, response, error in
+            defer { session.finishTasksAndInvalidate() }
+            guard error == nil, let temporaryFile, let response = response as? HTTPURLResponse,
+                  response.statusCode == 200,
+                  let mime = response.mimeType?.lowercased(),
+                  mime.hasPrefix("audio/") || mime == "application/octet-stream" else {
+                call.reject("The music service did not return playable audio")
+                return
+            }
+            do {
+                let file = try Self.audioCacheQueue.sync {
+                    try Self.storeAudio(temporaryFile, response: response)
+                }
+                guard let localURL = bridge.portablePath(fromLocalURL: file) else {
+                    call.reject("The iOS bridge could not expose the audio file")
+                    return
+                }
+                call.resolve(["url": localURL.absoluteString])
+            } catch {
+                call.reject("The iOS bridge could not save the audio file")
+            }
+        }.resume()
+    }
+
+    private static func storeAudio(_ temporaryFile: URL, response: HTTPURLResponse) throws -> URL {
+        let files = FileManager.default
+        let keys: Set<URLResourceKey> = [.contentModificationDateKey, .fileSizeKey]
+        let size = Int64(try temporaryFile.resourceValues(forKeys: keys).fileSize ?? 0)
+        guard size > 0, size <= audioLimit else { throw CocoaError(.fileReadCorruptFile) }
+        try files.createDirectory(at: audioDirectory, withIntermediateDirectories: true)
+        let cached = try files.contentsOfDirectory(at: audioDirectory, includingPropertiesForKeys: Array(keys))
+            .map { ($0, try $0.resourceValues(forKeys: keys)) }
+            .sorted { ($0.1.contentModificationDate ?? .distantPast) < ($1.1.contentModificationDate ?? .distantPast) }
+        var total = cached.reduce(size) { $0 + Int64($1.1.fileSize ?? 0) }
+        for (file, values) in cached where total > 3 * audioLimit {
+            try files.removeItem(at: file)
+            total -= Int64(values.fileSize ?? 0)
+        }
+        let extensionByMime = ["audio/mpeg": "mp3", "audio/flac": "flac", "audio/x-flac": "flac",
+                               "audio/mp4": "m4a", "audio/aac": "aac", "audio/ogg": "ogg", "audio/wav": "wav"]
+        let knownExtensions = ["mp3", "flac", "m4a", "aac", "ogg", "wav", "opus", "mp4"]
+        let suggested = (response.suggestedFilename as NSString?)?.pathExtension.lowercased() ?? ""
+        let suffix = extensionByMime[response.mimeType?.lowercased() ?? ""]
+            ?? (knownExtensions.contains(suggested) ? suggested : "mp3")
+        let destination = audioDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension(suffix)
+        try files.moveItem(at: temporaryFile, to: destination)
+        return destination
     }
 
     @objc func httpRequest(_ call: CAPPluginCall) {
@@ -175,11 +246,24 @@ final class FoliaSourceHTTP: CAPPlugin, CAPBridgedPlugin {
     }
 }
 
-private final class SourceRedirectPolicy: NSObject, URLSessionTaskDelegate {
+private final class SourceRedirectPolicy: NSObject, URLSessionDownloadDelegate {
     let mode: String
+    private let downloadLimit: Int64
 
-    init(mode: String) {
+    init(mode: String, downloadLimit: Int64 = .max) {
         self.mode = mode
+        self.downloadLimit = downloadLimit
+    }
+
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {}
+
+    func urlSession(
+        _ session: URLSession, downloadTask: URLSessionDownloadTask,
+        didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64
+    ) {
+        if totalBytesWritten > downloadLimit || totalBytesExpectedToWrite > downloadLimit {
+            downloadTask.cancel()
+        }
     }
 
     func urlSession(

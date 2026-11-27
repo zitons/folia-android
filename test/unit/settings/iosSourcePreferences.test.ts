@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getAvailableSettingsSectionIds } from '../../../src/components/modal/settings/navigation/settingsLastSection';
-import { resolveWebSourceConnection } from '../../../src/services/onlineMusic/web/iosWebSource';
+import { resolveWebSourceConnection, scopeIosNativeSource } from '../../../src/services/onlineMusic/web/iosWebSource';
 import type { WebSourceEnv } from '../../../src/services/onlineMusic/web/foliumWebSource';
 import { normalizeIosApiEndpoint, readIosSourcePreferences, saveIosSourcePreferences } from '../../../src/stores/iosSourcePreferences';
 
@@ -19,8 +19,10 @@ afterEach(() => {
 });
 
 describe('iOS source settings', () => {
-    it('keeps the built-in bridge as the default and lets a saved choice override it', () => {
+    it('defaults to external and lets a saved choice override the build configuration', () => {
         vi.stubEnv('VITE_IOS_NATIVE_SOURCES', '');
+        expect(readIosSourcePreferences().mode).toBe('external');
+        vi.stubEnv('VITE_IOS_NATIVE_SOURCES', 'true');
         expect(readIosSourcePreferences().mode).toBe('native');
         expect(getAvailableSettingsSectionIds({ isElectron: false })).toContain('sources');
         saveIosSourcePreferences({ mode: 'external', endpoints: { netease: 'https://music.example.test/api/', kugou: '', qq: '' } });
@@ -59,5 +61,21 @@ describe('iOS source settings', () => {
         custom.env.pageStore('netease');
         expect(pageStore.mock.calls[1][0]).not.toBe(initialKey);
         expect(pageStore.mock.calls[1][0]).not.toBe('netease');
+    });
+
+    it('preserves the shipped NetEase server session and keeps it out of native mode', () => {
+        const pageStore = vi.fn<WebSourceEnv['pageStore']>();
+        const env: WebSourceEnv = {
+            modId: 'test', pageStore,
+            call: vi.fn(), text: vi.fn(), translate: vi.fn(), error: vi.fn(), isPureMusicText: vi.fn(),
+        };
+        const previousBase = 'https://api-enhanced-eosin-one.vercel.app';
+        resolveWebSourceConnection(env, 'netease', previousBase, previousBase).env.pageStore('netease');
+        expect(pageStore).toHaveBeenLastCalledWith('netease');
+        scopeIosNativeSource(env).pageStore('netease');
+        expect(pageStore).toHaveBeenLastCalledWith('ios-native:netease');
+        saveIosSourcePreferences({ mode: 'external', endpoints: { netease: 'https://other.example.test', kugou: '', qq: '' } });
+        resolveWebSourceConnection(env, 'netease', previousBase, previousBase).env.pageStore('netease');
+        expect(pageStore).toHaveBeenLastCalledWith('ios-api:https%3A%2F%2Fother.example.test:netease');
     });
 });

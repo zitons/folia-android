@@ -18,7 +18,7 @@ const getWebApiBase = (): string => (
 export const registerWebSource = (): string[] => registerFoliumWebSource({
     package: source,
     create: env => {
-        const connection = resolveWebSourceConnection(env, 'netease', getWebApiBase());
+        const connection = resolveWebSourceConnection(env, 'netease', getWebApiBase(), 'https://api-enhanced-eosin-one.vercel.app');
         return createSource({ ...connection.env, web: { apiBase: connection.apiBase } });
     },
 });

@@ -26,7 +26,7 @@ export const normalizeIosApiEndpoint = (value: string): string | null => {
 
 export const readIosSourcePreferences = (): IosSourcePreferences => {
     const defaults: IosSourcePreferences = {
-        mode: import.meta.env.VITE_IOS_NATIVE_SOURCES === 'false' ? 'external' : 'native',
+        mode: import.meta.env.VITE_IOS_NATIVE_SOURCES === 'true' ? 'native' : 'external',
         endpoints: { netease: '', kugou: '', qq: '' },
     };
     try {
