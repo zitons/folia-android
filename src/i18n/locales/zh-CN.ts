@@ -2,6 +2,14 @@
 
 export default {
   "sourcesSettings": {
+    "iosConnection": "音源连接",
+    "iosMode": "API 模式",
+    "iosModeHint": "留空使用构建默认地址。外部 API 会处理登录请求，请使用你信任的服务。切换地址后需要重新登录。",
+    "iosNative": "内置桥接",
+    "iosExternal": "外部 API",
+    "iosApply": "保存并重新加载",
+    "iosInvalidUrl": "请输入有效的 HTTPS 地址，可包含路径。",
+    "iosSaveFailed": "保存失败，请重试。",
     "groupList": "音源",
     "groupNotices": "接管与覆盖",
     "groupInstall": "安装",

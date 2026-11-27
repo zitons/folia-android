@@ -16,6 +16,7 @@ export const DEFAULT_SETTINGS_SECTION: SettingsSectionId = 'appearance';
 
 /** The slice of Storage this module touches; tests pass a plain object. */
 import { IS_ANDROID_WEBVIEW } from '../../../../utils/platform';
+import { isCapacitorIos } from '../../../../platform/runtime';
 
 export type SettingsSectionStorage = Pick<Storage, 'getItem' | 'setItem'>;
 
@@ -29,6 +30,7 @@ export const getAvailableSettingsSectionIds = ({ isElectron }: SettingsSectionAv
         .flatMap(group => group.sections)
         .filter(section => !section.electronOnly
             || isElectron
+            || (section.id === 'sources' && isCapacitorIos())
             || (section.id === 'mods' && IS_ANDROID_WEBVIEW))
         .map(section => section.id)
 );

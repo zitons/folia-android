@@ -19,8 +19,10 @@ import { installSourceSwitchCommands } from './components/command-palette/source
 import { installSongNoteTagCommands } from './components/command-palette/songNoteTagCommandsInstaller';
 import { isModsBridgeAvailable } from './mods/ipc';
 import { registerWebSources } from './services/onlineMusic/web';
-import { registerAndroidSources } from './services/onlineMusic/web/androidSources';
-import { isCapacitorAndroid } from './platform/runtime';
+import { registerAndroidSources, registerIosHttpSources } from './services/onlineMusic/web/androidSources';
+import { startNativeIosSourceBridge } from './services/nativeAndroidBridge';
+import { isCapacitorAndroid, isCapacitorIos } from './platform/runtime';
+import { readIosSourcePreferences } from './stores/iosSourcePreferences';
 import { noteFoliumFirstScreenMounted, startFoliumForMainWindow } from './mods/runtime/mainWindowStart';
 import { installModResolutionGuard } from './mods/runtime/modResolutionGuard';
 import { installNativeDragGuard } from './utils/nativeDragGuard';
@@ -115,6 +117,7 @@ if (isMainApp) installLibrarySuiteChromeCommands();
 // 安卓没有模组运行时（音源模组要主进程的 rpc 才跑得起来），带 apiBase 通道的三个平台由 web/androidSources.ts
 // 经原生内置桥注册；桌面/网页版照旧。
 if (isCapacitorAndroid()) registerAndroidSources();
+else if (isCapacitorIos() && readIosSourcePreferences().mode === 'native' && startNativeIosSourceBridge()) registerIosHttpSources();
 else if (!isModsBridgeAvailable()) registerWebSources();
 // One search command per registered online source (no default platform), put in again when the sources change.
 if (isMainApp) installProviderSearchCommands();

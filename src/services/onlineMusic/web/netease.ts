@@ -1,6 +1,7 @@
 import source from 'virtual:folia-source/netease';
 import { createSource } from '../../../../sources/netease/core';
 import { registerFoliumWebSource } from './foliumWebSource';
+import { resolveWebSourceConnection } from './iosWebSource';
 
 // src/services/onlineMusic/web/netease.ts
 // The web build's source of this platform (web/index.ts): the core's createSource with the web's pieces, registered
@@ -16,5 +17,8 @@ const getWebApiBase = (): string => (
 /** Registers the source on the web; hands back its host ids. */
 export const registerWebSource = (): string[] => registerFoliumWebSource({
     package: source,
-    create: env => createSource({ ...env, web: { apiBase: getWebApiBase() } }),
+    create: env => {
+        const connection = resolveWebSourceConnection(env, 'netease', getWebApiBase());
+        return createSource({ ...connection.env, web: { apiBase: connection.apiBase } });
+    },
 });

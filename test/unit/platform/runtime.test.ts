@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { isCapacitorAndroid } from '../../../src/platform/runtime';
+import { isCapacitorAndroid, isCapacitorIos } from '../../../src/platform/runtime';
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -13,10 +13,12 @@ describe('isCapacitorAndroid', () => {
             Capacitor: { getPlatform: () => platform, isNativePlatform: () => native },
         });
         expect(isCapacitorAndroid()).toBe(expected);
+        expect(isCapacitorIos()).toBe(platform === 'ios');
     });
 
     it('returns false without Capacitor', () => {
         vi.stubGlobal('window', {});
         expect(isCapacitorAndroid()).toBe(false);
+        expect(isCapacitorIos()).toBe(false);
     });
 });

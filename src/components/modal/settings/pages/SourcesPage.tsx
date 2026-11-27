@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Eraser, FileArchive } from 'lucide-react';
 import { providerDisplayName } from '../../../../i18n/providerName';
+import { isCapacitorIos } from '../../../../platform/runtime';
 import { omni } from '../../../../services/onlineMusic/omni';
 import { openSettings } from '../../../../stores/useSettingsModalStore';
 import { settingsAnchorSubview } from '../../../../utils/settingsAnchorModel';
@@ -11,6 +12,7 @@ import { Button, Group, Row, option, type SettingsGroupDef, type SettingsOptionD
 import { manifestSourceName, shownSourceUsage, type SourceNotice, type SourceRowModel } from './sources/sourcesModel';
 import { SourceStateDots } from './sources/SourceStateDots';
 import { useSourcesSettings } from './sources/useSourcesSettings';
+import { IosSourceConnection, IOS_SOURCE_OPTIONS } from './sources/IosSourceConnection';
 import { useSettingsPage } from './settingsPageContext';
 import type { ModSourceUsageResult } from '../../../../mods/types';
 
@@ -36,7 +38,7 @@ const O = {
     navidrome: option(OTHER, 'sourceNavidrome', 'sourcesSettings.navidromeLabel'),
 };
 
-export const OPTIONS: SettingsOptionDef[] = Object.values(O);
+export const OPTIONS: SettingsOptionDef[] = [...Object.values(O), ...IOS_SOURCE_OPTIONS];
 
 const TIER_KEYS: Readonly<Record<SourceRowModel['tier'], string>> = {
     host: 'sourcesSettings.tierHost',
@@ -66,7 +68,7 @@ const usageText = (t: (key: string, options?: Record<string, unknown>) => string
     return shown ? t('sourcesSettings.usage', { data: formatByteSize(shown.data), cache: formatByteSize(shown.cache) }) : null;
 };
 
-const SourcesPage: React.FC = () => {
+const DesktopSourcesPage: React.FC = () => {
     const { t, i18n } = useTranslation();
     const { ready, rows, notices, usage, pending, switchTo, clearData, runNoticeAction, installZip } = useSourcesSettings();
     // The 「打开模组」 button opens the mods window straight away, over this page (closing it comes back here).
@@ -195,5 +197,7 @@ const SourcesPage: React.FC = () => {
         </>
     );
 };
+
+const SourcesPage: React.FC = () => isCapacitorIos() ? <IosSourceConnection /> : <DesktopSourcesPage />;
 
 export default SourcesPage;

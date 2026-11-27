@@ -1,10 +1,13 @@
 // src/platform/runtime.ts
 // Lightweight runtime checks shared by platform-only features.
 
-export const isCapacitorAndroid = (): boolean => {
-    if (typeof window === 'undefined') return false;
+const getCapacitorPlatform = (): string | undefined => {
+    if (typeof window === 'undefined') return undefined;
     const capacitor = (window as unknown as {
         Capacitor?: { getPlatform?: () => string };
     }).Capacitor;
-    return capacitor?.getPlatform?.() === 'android';
+    return capacitor?.getPlatform?.();
 };
+
+export const isCapacitorAndroid = (): boolean => getCapacitorPlatform() === 'android';
+export const isCapacitorIos = (): boolean => getCapacitorPlatform() === 'ios';

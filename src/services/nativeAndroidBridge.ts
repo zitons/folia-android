@@ -2,7 +2,7 @@
 // are running inside a browser extension while all privileged work is delegated
 // to the native Capacitor plugin.
 
-import { isCapacitorAndroid } from '../platform/runtime';
+import { isCapacitorAndroid, isCapacitorIos } from '../platform/runtime';
 
 const PAGE_SOURCE = 'folia-web-page';
 const BRIDGE_SOURCE = 'folia-extension-bridge';
@@ -198,10 +198,10 @@ const serializeBody = async (body: BodyInit | null | undefined): Promise<{
   };
 };
 
-const installCookieShim = (plugin: NativePlugin) => {
+const installCookieShim = (plugin: NativePlugin, bridgeId: string) => {
   const chromeObject = ((globalThis as any).chrome ??= {});
   chromeObject.runtime = {
-    id: 'folia-native-android',
+    id: bridgeId,
     getManifest: () => ({ version: BRIDGE_VERSION }),
   };
   chromeObject.storage = {
@@ -397,7 +397,7 @@ const installFetchShim = (plugin: NativePlugin) => {
       }),
       new Promise<never>((_resolve, reject) => {
         timeoutHandle = setTimeout(
-          () => reject(new Error(`Bridged request timed out after ${bridgeTimeoutMs}ms: ${method} ${targetUrl}`)),
+          () => reject(new Error(`Bridged request timed out after ${bridgeTimeoutMs}ms: ${method} ${new URL(targetUrl).pathname}`)),
           bridgeTimeoutMs,
         );
       }),
@@ -433,7 +433,8 @@ const installFetchShim = (plugin: NativePlugin) => {
       });
     }
     exposedSetCookies.forEach((value) => responseHeaders.append('x-folia-set-cookie', value));
-    return new Response(responseBuffer, {
+    const responseHasBody = method !== 'HEAD' && ![204, 205, 304].includes(result.status);
+    return new Response(responseHasBody ? responseBuffer : null, {
       status: result.status,
       headers: responseHeaders,
     });
@@ -493,7 +494,7 @@ const handleApiRequest = async (id: string, payload: Record<string, unknown>) =>
   }
 };
 
-const installMessageBridge = () => {
+const installMessageBridge = (bridgeId: string) => {
   window.addEventListener('message', (event) => {
     if (event.source !== window) return;
     const data = event.data as Record<string, any> | null;
@@ -504,7 +505,7 @@ const installMessageBridge = () => {
         type: 'FOLIA_BRIDGE_PONG',
         ready: true,
         version: BRIDGE_VERSION,
-        extId: 'folia-native-android',
+        extId: bridgeId,
       });
       return;
     }
@@ -515,29 +516,38 @@ const installMessageBridge = () => {
   });
 };
 
+const installSourceBridge = async (plugin: NativePlugin, platform: 'android' | 'ios'): Promise<void> => {
+    const bridgeId = `folia-native-${platform}`;
+    installCookieShim(plugin, bridgeId);
+    installFetchShim(plugin);
+    installMessageBridge(bridgeId);
+
+    if (platform === 'android') {
+        const { installNativePlaybackBridge } = await import('./nativePlaybackBridge');
+        await installNativePlaybackBridge(plugin as any);
+    }
+
+    // @ts-ignore The bundled extension module is plain JavaScript.
+    const module = await import('../nativeBridge/api/folia.js');
+    apiHandler = module.handleFoliaApiRequest as ApiHandler;
+    postToPage({ type: 'FOLIA_BRIDGE_READY', ready: true, version: BRIDGE_VERSION, extId: bridgeId });
+    flushQueuedRequests();
+};
+
 export const installNativeAndroidBridge = async (): Promise<void> => {
     if (!isCapacitorAndroid()) return;
+    const plugin = getPlugin();
+    if (!plugin) {
+        console.error('[FoliaNativeBridge] FoliaNative Capacitor plugin is not registered');
+        return;
+    }
+    await installSourceBridge(plugin, 'android');
+};
 
-  const plugin = getPlugin();
-  if (!plugin) {
-    console.error('[FoliaNativeBridge] FoliaNative Capacitor plugin is not registered');
-    return;
-  }
-
-  installCookieShim(plugin);
-  installFetchShim(plugin);
-  installMessageBridge();
-  const { installNativePlaybackBridge } = await import('./nativePlaybackBridge');
-  await installNativePlaybackBridge(plugin as any);
-
-  // @ts-ignore The bundled extension module is plain JavaScript.
-  const module = await import('../nativeBridge/api/folia.js');
-  apiHandler = module.handleFoliaApiRequest as ApiHandler;
-  postToPage({
-    type: 'FOLIA_BRIDGE_READY',
-    ready: true,
-    version: BRIDGE_VERSION,
-    extId: 'folia-native-android',
-  });
-  flushQueuedRequests();
+export const startNativeIosSourceBridge = (): boolean => {
+    if (!isCapacitorIos()) return false;
+    const plugin = getPlugin();
+    if (!plugin) return false;
+    void installSourceBridge(plugin, 'ios');
+    return true;
 };

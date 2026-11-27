@@ -242,6 +242,18 @@ const ANDROID_SOURCE_REGISTRARS: ReadonlyArray<readonly [string, () => string[]]
     ['lxmusic', registerLxMusic],
 ];
 
+export const registerIosHttpSources = (): string[] => {
+    installAndroidBridgeFetch();
+    return [registerNetease, registerKugou, registerQq, registerBodian].flatMap(register => {
+        try {
+            return register();
+        } catch (error) {
+            console.warn(`[Sources] iOS: ${register.name} could not be registered`, error);
+            return [];
+        }
+    });
+};
+
 /** 目录名（音源短 id）→ 模组 id。Apple Music 的目录叫 appleMusic、模组 id 是 apple-music。 */
 const modIdOfSource = new Map<string, string>(
     builtinModPackages.map(entry => [entry.id, entry.manifest.id] as const),
