@@ -1,4 +1,5 @@
 import Capacitor
+import CryptoKit
 import Foundation
 
 @objc(FoliaSourceHTTP)
@@ -45,6 +46,12 @@ final class FoliaSourceHTTP: CAPPlugin, CAPBridgedPlugin {
             call.reject("The audio destination is unavailable in the iOS music bridge")
             return
         }
+        let requestedAt = Date()
+        var identity = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        identity?.query = nil
+        identity?.fragment = nil
+        let digest = SHA256.hash(data: Data((identity?.string ?? url.absoluteString).utf8))
+            .map { String(format: "%02x", $0) }.joined()
         let configuration = URLSessionConfiguration.ephemeral
         configuration.timeoutIntervalForRequest = 12
         configuration.timeoutIntervalForResource = 30
@@ -69,7 +76,7 @@ final class FoliaSourceHTTP: CAPPlugin, CAPBridgedPlugin {
             }
             do {
                 let file = try Self.audioCacheQueue.sync {
-                    try Self.storeAudio(temporaryFile, response: response)
+                    try Self.storeAudio(temporaryFile, response: response, requestedAt: requestedAt, digest: digest)
                 }
                 guard let localURL = bridge.portablePath(fromLocalURL: file) else {
                     call.reject("The iOS bridge could not expose the audio file")
@@ -82,7 +89,9 @@ final class FoliaSourceHTTP: CAPPlugin, CAPBridgedPlugin {
         }.resume()
     }
 
-    private static func storeAudio(_ temporaryFile: URL, response: HTTPURLResponse) throws -> URL {
+    private static func storeAudio(
+        _ temporaryFile: URL, response: HTTPURLResponse, requestedAt: Date, digest: String
+    ) throws -> URL {
         let files = FileManager.default
         let keys: Set<URLResourceKey> = [.contentModificationDateKey, .fileSizeKey]
         let size = Int64(try temporaryFile.resourceValues(forKeys: keys).fileSize ?? 0)
@@ -92,17 +101,21 @@ final class FoliaSourceHTTP: CAPPlugin, CAPBridgedPlugin {
             .map { ($0, try $0.resourceValues(forKeys: keys)) }
             .sorted { ($0.1.contentModificationDate ?? .distantPast) < ($1.1.contentModificationDate ?? .distantPast) }
         var total = cached.reduce(size) { $0 + Int64($1.1.fileSize ?? 0) }
-        for (file, values) in cached where total > 3 * audioLimit {
+        // A superseded download can finish after the track the listener picked most recently.
+        // Evict in request order and do not admit old files at the expense of newer requests.
+        for (file, values) in cached where total > 3 * audioLimit && (values.contentModificationDate ?? .distantPast) < requestedAt {
             try files.removeItem(at: file)
             total -= Int64(values.fileSize ?? 0)
         }
+        guard total <= 3 * audioLimit else { throw CocoaError(.fileWriteOutOfSpace) }
         let extensionByMime = ["audio/mpeg": "mp3", "audio/flac": "flac", "audio/x-flac": "flac",
                                "audio/mp4": "m4a", "audio/aac": "aac", "audio/ogg": "ogg", "audio/wav": "wav"]
         let knownExtensions = ["mp3", "flac", "m4a", "aac", "ogg", "wav", "opus", "mp4"]
         let suggested = (response.suggestedFilename as NSString?)?.pathExtension.lowercased() ?? ""
         let suffix = extensionByMime[response.mimeType?.lowercased() ?? ""]
             ?? (knownExtensions.contains(suggested) ? suggested : "mp3")
-        let destination = audioDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension(suffix)
+        let destination = audioDirectory.appendingPathComponent("\(digest)-\(UUID().uuidString)").appendingPathExtension(suffix)
+        try files.setAttributes([.modificationDate: requestedAt], ofItemAtPath: temporaryFile.path)
         try files.moveItem(at: temporaryFile, to: destination)
         return destination
     }

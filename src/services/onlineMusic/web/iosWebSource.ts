@@ -7,21 +7,18 @@ export const scopeIosNativeSource = (env: WebSourceEnv): WebSourceEnv => {
     return { ...env, pageStore: sourceId => env.pageStore(`ios-native:${sourceId}`) };
 };
 
-export const resolveWebSourceConnection = (env: WebSourceEnv, source: IosApiSource, defaultBase: string, legacyIosBase?: string) => {
+export const resolveWebSourceConnection = (env: WebSourceEnv, source: IosApiSource, defaultBase: string, fallbackIosBase = '') => {
     if (!isCapacitorIos()) return { env, apiBase: defaultBase };
 
     const apiBase = readIosSourcePreferences().endpoints[source]
         || normalizeIosApiEndpoint(defaultBase)
-        || legacyIosBase
-        || '';
-    // Keep the previously shipped server's sign-in in its original store. Other servers never read it.
-    if (legacyIosBase && apiBase === legacyIosBase) return { env, apiBase };
+        || fallbackIosBase;
     const scope = encodeURIComponent(apiBase);
     return {
         apiBase,
         env: {
             ...env,
-            // Cookies provided to one API server must stay with that endpoint.
+            // Old unscoped sessions have no server identity. Require sign-in for each new scope.
             pageStore: (sourceId: string) => env.pageStore(`ios-api:${scope}:${sourceId}`),
         },
     };

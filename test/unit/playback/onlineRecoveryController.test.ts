@@ -109,6 +109,9 @@ describe('online playback recovery bounds', () => {
 
     it('keys retries on the media path so a re-minted stream token cannot restart the loop', () => {
         expect(getOnlineRecoveryKey(streamUrl('one'))).toBe(getOnlineRecoveryKey(streamUrl('two')));
+        const iosAudioFile = (key: string, instance: string) => `capacitor://localhost/_capacitor_file_/tmp/FoliaSourceAudio/${key.repeat(64)}-${instance}.mp3`;
+        expect(getOnlineRecoveryKey(iosAudioFile('a', '123-abc'))).toBe(getOnlineRecoveryKey(iosAudioFile('a', '456-def')));
+        expect(getOnlineRecoveryKey(iosAudioFile('a', '123-abc'))).not.toBe(getOnlineRecoveryKey(iosAudioFile('b', '123-abc')));
         expect(getOnlineRecoveryKey(streamUrl('one')))
             .toBe('http://isure.stream.qqmusic.qq.com/M800004Th6td4LaoZs004Th6td4LaoZs.mp3');
         // YouTube Music 的地址每次请求都换一把 key（音源模组的 _media 地址，key 在 once 里）：同一首歌必须落在同一个重试 key 上。

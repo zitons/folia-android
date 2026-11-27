@@ -63,7 +63,7 @@ describe('iOS source settings', () => {
         expect(pageStore.mock.calls[1][0]).not.toBe('netease');
     });
 
-    it('preserves the shipped NetEase server session and keeps it out of native mode', () => {
+    it('uses the shipped NetEase endpoint without reusing unscoped credentials', () => {
         const pageStore = vi.fn<WebSourceEnv['pageStore']>();
         const env: WebSourceEnv = {
             modId: 'test', pageStore,
@@ -73,7 +73,7 @@ describe('iOS source settings', () => {
         const connection = resolveWebSourceConnection(env, 'netease', '', previousBase);
         expect(connection.apiBase).toBe(previousBase);
         connection.env.pageStore('netease');
-        expect(pageStore).toHaveBeenLastCalledWith('netease');
+        expect(pageStore).toHaveBeenLastCalledWith('ios-api:https%3A%2F%2Fapi-enhanced-eosin-one.vercel.app:netease');
         scopeIosNativeSource(env).pageStore('netease');
         expect(pageStore).toHaveBeenLastCalledWith('ios-native:netease');
         saveIosSourcePreferences({ mode: 'external', endpoints: { netease: 'https://other.example.test', kugou: '', qq: '' } });

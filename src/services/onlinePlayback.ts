@@ -229,12 +229,15 @@ export async function loadOnlineSongAudioSource(
     const fromCopy = await playCopy(await readCopy(level));
     if (fromCopy) return fromCopy;
 
-    if (prefetched?.audioUrl && prefetched.audioUrl !== 'CACHED_IN_DB' && isUrlValid(prefetched.audioUrlFetchedAt)) {
+    const prefetchedUrl = prefetched?.audioUrl;
+    if (prefetched && prefetchedUrl && prefetchedUrl !== 'CACHED_IN_DB' && isUrlValid(prefetched.audioUrlFetchedAt)) {
+        const replayGain = song.replayGain ?? prefetched.replayGain;
+        const preview = omni.isPreviewAudioSource(prefetchedUrl);
         return {
             kind: 'ok',
-            audioSrc: isCapacitorIos() ? await omni.resolveIosPlaybackAudioUrl(prefetched.audioUrl) : prefetched.audioUrl,
-            replayGain: song.replayGain ?? prefetched.replayGain,
-            preview: omni.isPreviewAudioSource(prefetched.audioUrl),
+            audioSrc: isCapacitorIos() ? await omni.resolveIosPlaybackAudioUrl(prefetchedUrl) : prefetchedUrl,
+            replayGain,
+            preview,
         };
     }
 

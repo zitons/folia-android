@@ -10,6 +10,8 @@ iOS 的 WebView 由原生控制器约束在 UIKit 安全区内。`capacitor.conf
 
 iOS 默认使用外部 API。在「设置 → 音源 → API 模式」可分别填写网易云、酷狗和 QQ 的 HTTPS 地址，或启用内置桥接入网易云、酷狗、QQ 和波点。保存后应用会重新加载。内置模式遇到音频 CDN 跨域限制时，会尝试下载到 iOS 临时目录后播放。各音源的登录、搜索、歌词和播放需要在 iPhone 上验证。
 
+旧版 iOS 会话未记录 API 地址。升级后首次使用外部 API 时需要重新登录，各地址的会话会单独保存。
+
 要为新安装的应用预设内置模式，可在本地构建时设置 `VITE_IOS_NATIVE_SOURCES=true`，或在 Actions 的 **Variables** 中设置 `IOS_NATIVE_SOURCES=true`。Web 路径默认使用 `https://api-enhanced-eosin-one.vercel.app` 作为网易云后端，可用 `IOS_NETEASE_API_BASE` 覆盖，或用 `IOS_KUGOU_API_BASE`、`IOS_QQ_API_BASE` 接入对应的自托管服务。也可在应用内配置 HTTPS Navidrome。需要 Folia 的歌词代理时，把 `IOS_LYRIC_PROXY_BASE` 设为部署 `/api/lyric-proxy` 的 HTTPS 站点根地址。服务端需允许来自应用 WebView 的跨域请求。这些地址会编进前端包，凭据应在运行时登录时输入。
 
 这个版本提供 iOS 工程和 IPA 构建。原生后台播放、锁屏切歌和本地曲库属于后续移植范围，各音源的登录、播放和歌词同步需要在 iPhone 上验收。

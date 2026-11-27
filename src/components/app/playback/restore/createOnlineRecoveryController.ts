@@ -70,6 +70,10 @@ export const getOnlineRecoveryKey = (src: string | null | undefined): string | n
             parsedUrl.searchParams.delete('once');
             return parsedUrl.href;
         }
+        if (parsedUrl.protocol === 'capacitor:' && parsedUrl.pathname.startsWith('/_capacitor_file_/')) {
+            const audioFile = /\/FoliaSourceAudio\/([a-f0-9]{64})-[a-f0-9-]+\.[a-z0-9]+$/i.exec(parsedUrl.pathname);
+            if (audioFile) return `ios-audio:${audioFile[1]}`;
+        }
         // Only remote streams carry a token in the query; blob: and friends have no meaningful origin.
         if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
             return src;
