@@ -199,6 +199,13 @@ describe('Media Session playback routes', () => {
             expect(seek).toBeTypeOf('function');
             seek({ seekTime: 60 });
             expect(deck.currentTime).toBe(60);
+            const seekForward = mediaSession.setActionHandler.mock.calls.find(([action]) => action === 'seekforward')?.[1];
+            const seekBackward = mediaSession.setActionHandler.mock.calls.find(([action]) => action === 'seekbackward')?.[1];
+            seekForward({});
+            expect(deck.currentTime).toBe(70);
+            seekBackward({ seekOffset: 100 });
+            expect(deck.currentTime).toBe(0);
+            seek({ seekTime: 60 });
             seekDuringTransition.mockReturnValueOnce(true);
             seek({ seekTime: 80 });
             expect(seekDuringTransition).toHaveBeenLastCalledWith(80);

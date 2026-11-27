@@ -215,20 +215,30 @@ export const useMediaSessionBridge = ({
         // Re-publish after playback starts in case Chromium delivered a late clear from the old source.
         audio.addEventListener('playing', publish);
         const audioStateEvents = ['emptied', 'loadedmetadata', 'durationchange', 'playing', 'pause', 'ended', 'error', 'seeked', 'ratechange'];
+        const boundSeekActions: MediaSessionAction[] = [];
         if (followsAudioState) {
-            try {
-                navigator.mediaSession.setActionHandler('seekto', ({ seekTime, fastSeek }) => {
-                    if (!deck || seekTime === undefined || !Number.isFinite(seekTime)
-                        || isNowPlayingControlDisabledRef.current
-                        || !isMediaSessionSourceReady(deck, expectedSource, document.baseURI)) return;
+            const seek = (time: number | undefined, fastSeek = false) => {
+                if (!deck || time === undefined || !Number.isFinite(time)
+                    || isNowPlayingControlDisabledRef.current
+                    || !isMediaSessionSourceReady(deck, expectedSource, document.baseURI)) return;
 
-                    const position = Math.max(0, Math.min(deck.duration, seekTime));
-                    if (seekDuringTransition?.(position)) return;
-                    if (fastSeek && typeof deck.fastSeek === 'function') deck.fastSeek(position);
-                    else deck.currentTime = position;
-                });
-            } catch (e) {
-                console.warn('[MediaSession] Failed to bind seek handler', e);
+                const position = Math.max(0, Math.min(deck.duration, time));
+                if (seekDuringTransition?.(position)) return;
+                if (fastSeek && typeof deck.fastSeek === 'function') deck.fastSeek(position);
+                else deck.currentTime = position;
+            };
+            const seekHandlers: [MediaSessionAction, MediaSessionActionHandler][] = [
+                ['seekto', ({ seekTime, fastSeek }) => seek(seekTime, fastSeek)],
+                ['seekbackward', ({ seekOffset }) => seek(audio.currentTime - (seekOffset ?? 10))],
+                ['seekforward', ({ seekOffset }) => seek(audio.currentTime + (seekOffset ?? 10))],
+            ];
+            for (const [action, handler] of seekHandlers) {
+                try {
+                    navigator.mediaSession.setActionHandler(action, handler);
+                    boundSeekActions.push(action);
+                } catch (e) {
+                    console.warn(`[MediaSession] Failed to bind ${action} handler`, e);
+                }
             }
             audioStateEvents.forEach(event => audio.addEventListener(event, syncAudioState));
             document.addEventListener('visibilitychange', syncAudioState);
@@ -244,10 +254,12 @@ export const useMediaSessionBridge = ({
             audio.removeEventListener('durationchange', publish);
             audio.removeEventListener('playing', publish);
             if (followsAudioState) {
-                try {
-                    navigator.mediaSession.setActionHandler('seekto', null);
-                } catch {
-                    // Some WebKit versions do not expose this action.
+                for (const action of boundSeekActions) {
+                    try {
+                        navigator.mediaSession.setActionHandler(action, null);
+                    } catch (e) {
+                        console.warn(`[MediaSession] Failed to clear ${action} handler`, e);
+                    }
                 }
                 audioStateEvents.forEach(event => audio.removeEventListener(event, syncAudioState));
                 document.removeEventListener('visibilitychange', syncAudioState);
