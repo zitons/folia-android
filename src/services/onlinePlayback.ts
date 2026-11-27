@@ -26,6 +26,7 @@ import { useOnlineProviderAccountStore } from '../stores/useOnlineProviderAccoun
 import { saveLyricCacheSongMetadata } from './lyricExport/lyricCacheMetadata';
 import { errorFields } from '../utils/errorText';
 import { itemTraits } from './onlineMusic/itemTraits';
+import { isCapacitorIos } from '../platform/runtime';
 
 // How long playback waits for a stored copy's header to give its play length (`wholeCopy`). Past
 // it the copy plays untested: the check must not hold up a song that starts from the cache.
@@ -231,7 +232,7 @@ export async function loadOnlineSongAudioSource(
     if (prefetched?.audioUrl && prefetched.audioUrl !== 'CACHED_IN_DB' && isUrlValid(prefetched.audioUrlFetchedAt)) {
         return {
             kind: 'ok',
-            audioSrc: prefetched.audioUrl,
+            audioSrc: isCapacitorIos() ? await omni.resolveIosPlaybackAudioUrl(prefetched.audioUrl) : prefetched.audioUrl,
             replayGain: song.replayGain ?? prefetched.replayGain,
             preview: omni.isPreviewAudioSource(prefetched.audioUrl),
         };
@@ -273,7 +274,9 @@ export async function loadOnlineSongAudioSource(
         // 安卓上声明了 requiresSameOriginAudio 的平台：先经原生桥拉成同源 blob（失败就照用平台地址）。
         // 预取/记录用平台给的原始地址（blob 只活在这一个会话），播放才用 blob。
         const playableUrl = thrown === undefined ? toPlayableAudioUrl(source?.url) : null;
-        const playUrl = playableUrl ? await androidProxiedAudioUrl(playableUrl, providerId) : null;
+        const playUrl = playableUrl && await (
+            isCapacitorIos() ? omni.resolveIosPlaybackAudioUrl(playableUrl) : androidProxiedAudioUrl(playableUrl, providerId)
+        );
         if (playUrl && playableUrl) {
             const replayGain = applyOnlineAudioSourceMetadata(song, source?.replayGain).replayGain;
             updatePrefetchedAudioUrl(song, playableUrl, audioQuality, replayGain);

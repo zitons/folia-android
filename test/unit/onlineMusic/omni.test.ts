@@ -9,6 +9,7 @@ import type { OmniRequestRunner, OmniSongDetail, OnlineMusicProvider, ProviderCa
 import { onlineFailureOf } from '@/services/onlineMusic/failure/onlineFailureCase';
 import { installOmniResultHooks } from '@/services/hostExtensionHooks';
 import { ARTIST_SONGS_CAP } from '@/services/onlineMusic/alignedPages';
+import * as nativeRemoteAudio from '@/services/nativeRemoteAudio';
 
 // test/unit/onlineMusic/omni.test.ts
 
@@ -666,6 +667,24 @@ describe('where a preview clip starts in its song', () => {
         expect(omni.audioSourceMetadataVersion()).toBe(version + 1);
 
         expect(omni.previewClipStartMsOfAudioSource(`https://${providerId}/clip`)).toBe(208320);
+    });
+
+    it('carries preview metadata to an iOS playback file while retaining the provider URL', async () => {
+        const file = 'capacitor://localhost/_capacitor_file_/preview.mp3';
+        const substitute = vi.spyOn(nativeRemoteAudio, 'proxyNativeRemoteAudioUrl')
+            .mockImplementation(async url => url);
+        try {
+            registerOnlineMusicProvider(clipProvider(208320));
+            const source = await omni.getAudioSource(song(providerId, 'ios-clip'), 'standard');
+            expect(source?.url).toBe(`https://${providerId}/ios-clip`);
+            substitute.mockResolvedValueOnce(file);
+            expect(await omni.resolveIosPlaybackAudioUrl(source!.url)).toBe(file);
+            expect(omni.isPreviewAudioSource(file)).toBe(true);
+            expect(omni.previewClipStartMsOfAudioSource(file)).toBe(208320);
+            expect(omni.levelOfAudioSource(file)).toBe('standard');
+        } finally {
+            substitute.mockRestore();
+        }
     });
 
     it.each([NaN, Infinity, -Infinity, -1])('ignores an invalid clip start: %s', async clipStartMs => {

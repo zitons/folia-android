@@ -4,6 +4,7 @@ import type { PersonalFmCatalog } from '../../types/personalFm';
 import type { SongResult, UnifiedSong } from '../../types';
 import { noteOnlineMutationFailure } from '../../utils/onlineMutationDiagnostics';
 import { proxyNativeRemoteAudioUrl } from '../nativeRemoteAudio';
+import { isCapacitorIos } from '../../platform/runtime';
 import { noteOnlinePlaybackError, noteOnlinePlaybackOutcome } from '../../utils/onlinePlaybackDiagnostics';
 import type {
     AudioQualityPreference,
@@ -1498,7 +1499,7 @@ export const omni = {
         // Android：把 CDN 音频地址挂到本地流服务上（带 ACAO:* 与 Range），绕开 WebView 的 CORS。
         // 桌面浏览器没有 Capacitor 插件，函数原样返回；地址没变时保持同一个对象（调用方按引用判断）。
         let resolved = hooked;
-        if (hooked?.url) {
+        if (hooked?.url && !isCapacitorIos()) {
             const proxiedUrl = await proxyNativeRemoteAudioUrl(hooked.url);
             if (proxiedUrl !== hooked.url) resolved = { ...hooked, url: proxiedUrl };
         }
@@ -1514,6 +1515,16 @@ export const omni = {
             elapsedMs: Date.now() - resolveStartedAt,
         });
         return resolved;
+    },
+
+    // The iOS file exists only for playback. Keep the provider URL in prefetch and carry its metadata to the file.
+    async resolveIosPlaybackAudioUrl(url: string): Promise<string> {
+        const playableUrl = await proxyNativeRemoteAudioUrl(url);
+        if (playableUrl !== url) {
+            const metadata = audioSourceLevels.get(audioSourceLevelKey(url));
+            if (metadata) noteAudioSourceLevel(playableUrl, metadata);
+        }
+        return playableUrl;
     },
 
     // The level a URL handed out by `getAudioSource` was asked for at. Undefined for any other URL

@@ -70,7 +70,9 @@ describe('iOS source settings', () => {
             call: vi.fn(), text: vi.fn(), translate: vi.fn(), error: vi.fn(), isPureMusicText: vi.fn(),
         };
         const previousBase = 'https://api-enhanced-eosin-one.vercel.app';
-        resolveWebSourceConnection(env, 'netease', previousBase, previousBase).env.pageStore('netease');
+        const connection = resolveWebSourceConnection(env, 'netease', '', previousBase);
+        expect(connection.apiBase).toBe(previousBase);
+        connection.env.pageStore('netease');
         expect(pageStore).toHaveBeenLastCalledWith('netease');
         scopeIosNativeSource(env).pageStore('netease');
         expect(pageStore).toHaveBeenLastCalledWith('ios-native:netease');
