@@ -192,6 +192,8 @@
 
 @media (max-width: 640px) {
     .lattice-refresh { left: 64px; }
+    .lattice-queue-root:not(.is-radio) .lattice-poster .lattice-poster-copy small { font-size: 22px; }
+    .lattice-queue-root:not(.is-radio) .lattice-poster.is-expanded .lattice-poster-copy small { font-size: 24px; }
 }
 
 /* ---------- 翻牌交接（资料库墙 ↔ Lattice，设计稿 §7「进入队列」；属性由 Lattice.tsx 按 useWallHandoffStore 挂） ----------

@@ -26,5 +26,8 @@
 }
 @media (max-width: 640px) {
     .lattice-lyrics { top: 160px; bottom: 164px; }
+    .lattice-queue-root:not(.is-radio) .lattice-lyrics { top: 190px; }
     .lattice-root .lattice-poster.is-expanded .lattice-lyric-metadata { top: 112px; right: 32px; }
+    .lattice-queue-root:not(.is-radio) .lattice-poster.is-expanded .lattice-lyric-metadata strong { font-size: 30px; }
+    .lattice-queue-root:not(.is-radio) .lattice-poster.is-expanded .lattice-lyric-metadata small { font-size: 24px; }
 }

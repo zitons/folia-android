@@ -1,6 +1,7 @@
 import UIKit
 import Capacitor
 import AVFAudio
+import WebKit
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     var window: UIWindow?
@@ -27,12 +28,63 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 private final class MusicBridgeViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         super.capacitorDidLoad()
+        let controller = webView?.configuration.userContentController
+        controller?.add(ThemeColorHandler(owner: self), name: "foliaSafeAreaColor")
+        controller?.addUserScript(WKUserScript(source: """
+            (() => {
+                let previous = '';
+                let root;
+                const styleObserver = new MutationObserver(() => update());
+                const update = () => {
+                    if (!root) return;
+                    const color = getComputedStyle(root).getPropertyValue('--bg-color').trim();
+                    if (!color || color === previous) return;
+                    const probe = document.createElement('span');
+                    probe.style.color = color;
+                    if (!probe.style.color) return;
+                    document.body.appendChild(probe);
+                    const resolved = getComputedStyle(probe).color;
+                    probe.remove();
+                    const channels = resolved.match(/^rgba?\\(\\s*(\\d+(?:\\.\\d+)?)\\s*,\\s*(\\d+(?:\\.\\d+)?)\\s*,\\s*(\\d+(?:\\.\\d+)?)(?:\\s*,\\s*[\\d.]+)?\\s*\\)$/);
+                    if (!channels) return;
+                    previous = color;
+                    window.webkit.messageHandlers.foliaSafeAreaColor.postMessage(channels.slice(1, 4).map(Number));
+                };
+                const discover = () => {
+                    if (root && root.isConnected) return;
+                    styleObserver.disconnect();
+                    root = document.querySelector('[style*="--bg-color"]');
+                    if (!root) return;
+                    previous = '';
+                    styleObserver.observe(root, { attributes: true, attributeFilter: ['style'] });
+                    update();
+                };
+                new MutationObserver(discover).observe(document.documentElement, { childList: true, subtree: true });
+                discover();
+            })();
+            """, injectionTime: .atDocumentEnd, forMainFrameOnly: true))
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback)
         } catch {
             NSLog("Folia could not configure the playback audio session: %@", error.localizedDescription)
         }
         bridge?.registerPluginInstance(FoliaSourceHTTP())
+    }
+}
+
+private final class ThemeColorHandler: NSObject, WKScriptMessageHandler {
+    private weak var owner: UIViewController?
+
+    init(owner: UIViewController) {
+        self.owner = owner
+    }
+
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard let channels = message.body as? [Double], channels.count == 3,
+              channels.allSatisfy({ $0.isFinite && (0...255).contains($0) }) else { return }
+        owner?.parent?.view.backgroundColor = UIColor(
+            red: channels[0] / 255, green: channels[1] / 255, blue: channels[2] / 255, alpha: 1
+        )
     }
 }
 
