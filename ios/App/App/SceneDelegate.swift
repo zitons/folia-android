@@ -82,14 +82,33 @@ private final class ThemeColorHandler: NSObject, WKScriptMessageHandler {
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         guard let channels = message.body as? [Double], channels.count == 3,
               channels.allSatisfy({ $0.isFinite && (0...255).contains($0) }) else { return }
-        owner?.parent?.view.backgroundColor = UIColor(
-            red: channels[0] / 255, green: channels[1] / 255, blue: channels[2] / 255, alpha: 1
+        (owner?.parent as? SafeAreaViewController)?.applyThemeColor(
+            red: channels[0] / 255, green: channels[1] / 255, blue: channels[2] / 255
         )
     }
 }
 
 private final class SafeAreaViewController: UIViewController {
     private let bridgeController = MusicBridgeViewController()
+    private var themeStatusBarStyle: UIStatusBarStyle = .default
+
+    override var preferredStatusBarStyle: UIStatusBarStyle { themeStatusBarStyle }
+    override var childForStatusBarHidden: UIViewController? { bridgeController }
+    override var childForHomeIndicatorAutoHidden: UIViewController? { bridgeController }
+
+    func applyThemeColor(red: Double, green: Double, blue: Double) {
+        view.backgroundColor = UIColor(red: red, green: green, blue: blue, alpha: 1)
+
+        func linearize(_ channel: Double) -> Double {
+            channel <= 0.04045 ? channel / 12.92 : pow((channel + 0.055) / 1.055, 2.4)
+        }
+
+        let luminance = 0.2126 * linearize(red) + 0.7152 * linearize(green) + 0.0722 * linearize(blue)
+        let style: UIStatusBarStyle = luminance >= sqrt(0.0525) - 0.05 ? .darkContent : .lightContent
+        guard themeStatusBarStyle != style else { return }
+        themeStatusBarStyle = style
+        setNeedsStatusBarAppearanceUpdate()
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
