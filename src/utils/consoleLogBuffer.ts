@@ -47,7 +47,12 @@ const listeners = new Set<() => void>();
  */
 const format = (value: unknown): string => {
     if (typeof value === 'string') return value;
-    if (value instanceof Error) return value.stack ?? `${value.name}: ${value.message}`;
+    if (value instanceof Error) {
+        const summary = value.message ? `${value.name}: ${value.message}` : value.name;
+        const stack = value.stack;
+        if (!stack) return summary;
+        return stack.startsWith(summary) ? stack : `${summary}\n${stack}`;
+    }
     try {
         const seen = new WeakSet<object>();
         return JSON.stringify(value, (_key, item: unknown) => {

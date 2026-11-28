@@ -9,6 +9,7 @@ import { nextTransitionSong } from '../../utils/playbackNeighbors';
 import { getPrefetchedData } from '../prefetchService';
 import { describeProfileState, getTrackProfile, recordPlayedTail } from './profileService';
 import { onPlayWrapped } from '../volumeBalance/balanceMeter';
+import { createBalanceHarvestGuard } from '../volumeBalance/balanceHarvestGuard';
 import { learnPlayedSong } from '../volumeBalance/balanceRecords';
 import { refreshModelAvailability } from '../analysis/modelAvailability';
 import { canSeparateStems, clearStemDeadlines, ensureStems, getStemsByKey, setWantedStems, stemWindowKey } from './stems';
@@ -283,17 +284,19 @@ export function useAutomixDecks({
      * the one that carries almost every track, and `ended` covers the song changes that were never
      * blended at all.
      */
+    const balanceHarvestGuard = useRef(createBalanceHarvestGuard()).current;
     const harvestDeck = useCallback((deck: AutomixDeckId) => {
         const element = elementsRef.current[deck];
         const song = deckSongRef.current[deck];
         const chain = chainsRef.current[deck];
         if (element && song && chain && usePlaybackStore.getState().replayGainMode === 'auto') {
-            learnPlayedSong(song, chain.balanceMeter.play(), element);
+            const play = chain.balanceMeter.play();
+            if (play && balanceHarvestGuard(chain.balanceMeter)) learnPlayedSong(song, play, element);
         }
         const history = chain?.analyser.levelHistory();
         if (!element || !song || !history) return;
         recordPlayedTail(song, history.db, history.hopSec, element.duration, element.currentSrc || null);
-    }, []);
+    }, [balanceHarvestGuard]);
     // The session's ports are built once, before this exists, and must not close over a stale copy.
     const harvestRef = useRef(harvestDeck);
     harvestRef.current = harvestDeck;

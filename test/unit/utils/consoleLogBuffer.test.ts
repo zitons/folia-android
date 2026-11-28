@@ -69,6 +69,16 @@ describe('consoleLogBuffer scopes', () => {
             '[App] Failed to apply audio output device {"error":"NotFoundError: Requested device not found","sinkTarget":"audio-context"}',
         );
     });
+
+    it('keeps the error message when WebKit provides only stack frames', () => {
+        const error = new TypeError('The cover could not be decoded');
+        error.stack = 'decodeCover@capacitor://localhost/assets/player.js:90:12';
+        console.warn('[MonetBackground] The picture could not be made:', error);
+
+        expect(getConsoleLogEntries()[0].text).toContain(
+            'TypeError: The cover could not be decoded\ndecodeCover@capacitor://localhost/assets/player.js:90:12',
+        );
+    });
 });
 
 describe('console capture switch', () => {
