@@ -229,4 +229,61 @@ describe('Media Session playback routes', () => {
             platform.mockRestore();
         }
     });
+    it('keeps the real playing deck state during a transition and restores iOS metadata', () => {
+        const platform = vi.spyOn(Capacitor, 'getPlatform').mockReturnValue('ios');
+        const source = 'https://example.com/display.mp3';
+        const display = Object.assign(new EventTarget(), {
+            currentTime: 0, duration: 200, readyState: 0, currentSrc: '',
+            playbackRate: 1, paused: true, ended: false, error: null,
+        });
+        const active = Object.assign(new EventTarget(), {
+            currentTime: 10, duration: 200, readyState: 1, currentSrc: 'https://example.com/active.mp3',
+            playbackRate: 1, paused: false, ended: false, error: null as { code: number } | null,
+        });
+        const audioRef = { current: display as unknown as HTMLAudioElement };
+        const getDisplayAudioElement = () => display as unknown as HTMLAudioElement;
+        const controlsDisabledRef = { current: false };
+        function Probe({ activeDeck }: { activeDeck: 'A' | 'B' }) {
+            useMediaSessionBridge({
+                audioRef, activeDeck, getDisplayAudioElement,
+                audioSrc: source, currentSong: navidromeSong, cachedCoverUrl: null,
+                playerState: PlayerState.PAUSED, isNowPlayingStageActive: false, unknownArtistLabel: 'Unknown',
+                mediaSessionPlayRef: { current: async () => undefined }, mediaSessionPauseRef: { current: () => undefined },
+                mediaSessionPrevRef: { current: () => undefined }, mediaSessionNextRef: { current: () => undefined },
+                isNowPlayingControlDisabledRef: controlsDisabledRef,
+            });
+            return null;
+        }
+        try {
+            render(React.createElement(Probe, { activeDeck: 'A' }));
+            expect(mediaSession.playbackState).toBe('paused');
+            audioRef.current = active as unknown as HTMLAudioElement;
+            act(() => root!.render(React.createElement(Probe, { activeDeck: 'B' })));
+            expect(mediaSession.playbackState).toBe('playing');
+            expect(mediaSession.setPositionState).toHaveBeenLastCalledWith();
+            Object.assign(display, { readyState: 1, currentSrc: source, ended: true });
+            display.dispatchEvent(new Event('ended'));
+            expect(mediaSession.playbackState).toBe('playing');
+            expect(mediaSession.setPositionState).toHaveBeenLastCalledWith();
+            active.error = { code: 2 };
+            active.dispatchEvent(new Event('error'));
+            expect(mediaSession.playbackState).toBe('paused');
+            Object.assign(display, { readyState: 1, currentSrc: source, paused: false, ended: false });
+            mediaSession.setPositionState.mockImplementation(() => { throw new Error('unsupported'); });
+            const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+            display.dispatchEvent(new Event('playing'));
+            expect(mediaSession.metadata).toMatchObject({ title: 'Remote' });
+            mediaSession.metadata = null;
+            window.dispatchEvent(new Event('pageshow'));
+            expect(mediaSession.metadata).toMatchObject({ title: 'Remote' });
+            mediaSession.metadata = null;
+            document.dispatchEvent(new Event('visibilitychange'));
+            expect(mediaSession.metadata).toMatchObject({ title: 'Remote' });
+            warning.mockRestore();
+        } finally {
+            mediaSession.setPositionState.mockReset();
+            platform.mockRestore();
+        }
+    });
+
 });

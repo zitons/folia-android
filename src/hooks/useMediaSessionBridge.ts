@@ -27,6 +27,7 @@ export type UseMediaSessionBridgeOptions = {
      * song's name over another song's progress. `audioSrc` is passed to match this element.
      */
     getDisplayAudioElement?: () => HTMLAudioElement | null;
+    activeDeck?: 'A' | 'B';
     seekDuringTransition?: (time: number) => boolean;
     audioSrc: string | null;
     currentSong: SongResult | null;
@@ -44,6 +45,7 @@ export type UseMediaSessionBridgeOptions = {
 export const useMediaSessionBridge = ({
     audioRef,
     getDisplayAudioElement,
+    activeDeck: activeDeckId,
     seekDuringTransition,
     audioSrc,
     currentSong,
@@ -141,24 +143,29 @@ export const useMediaSessionBridge = ({
         // published beside it. Falls back to the active deck whenever no blend is holding a picture.
         const deck = getDisplayAudioElement?.() ?? audioRef.current;
         const audio = getObservedMedia(deck);
+        const activeDeck = audioRef.current;
         // The shim switched to this track before the track store named it, so its source is current here.
         // On every non-web route (mpv, the provider's own player) that is its shim's source, not a URL.
         const expectedSource = playbackRoute === 'web' ? audioSrc : getObservedMedia(null)?.currentSrc;
+        const isPlaying = (candidate: HTMLAudioElement | null) => !!candidate
+            && !candidate.paused && !candidate.ended && !candidate.error && !!candidate.currentSrc;
         const syncAudioState = () => {
             try {
-                if (!audio || !expectedSource || !isMediaSessionSourceReady(audio, expectedSource, document.baseURI)) {
-                    navigator.mediaSession.playbackState = 'paused';
+                const displayPlaying = isPlaying(deck);
+                const playing = displayPlaying || isPlaying(audioRef.current);
+                navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
+                if (!audio || !expectedSource || !isMediaSessionSourceReady(audio, expectedSource, document.baseURI)
+                    || (playing && !displayPlaying)) {
                     navigator.mediaSession.setPositionState?.();
                     return;
                 }
-                navigator.mediaSession.playbackState = audio.paused || audio.ended || deck?.error ? 'paused' : 'playing';
                 const position = createMediaSessionPositionState(audio);
                 if (position) navigator.mediaSession.setPositionState(position);
             } catch (e) {
                 console.warn('[MediaSession] Failed to synchronize audio state', e);
             }
         };
-        if (!audio || !expectedSource) {
+        if (!audio || (!expectedSource && !followsAudioState)) {
             if (followsAudioState) syncAudioState();
             return;
         }
@@ -168,7 +175,7 @@ export const useMediaSessionBridge = ({
         let artworkUrl = getSupportedMediaSessionArtworkUrl(sourceArtworkUrl, document.baseURI);
         let disposableArtworkUrl: string | null = null;
         const publish = () => {
-            if (disposed || !isMediaSessionSourceReady(audio, expectedSource, document.baseURI)) {
+            if (disposed || !expectedSource || !isMediaSessionSourceReady(audio, expectedSource, document.baseURI)) {
                 return;
             }
 
@@ -178,6 +185,9 @@ export const useMediaSessionBridge = ({
                     artist: getSongArtistLabel(currentSong) || unknownArtistLabel,
                     album: getSongAlbumLabel(currentSong),
                     artworkUrl,
+                }, undefined, {
+                    toleratePositionFailure: followsAudioState,
+                    skipPosition: followsAudioState && !isPlaying(deck) && isPlaying(audioRef.current),
                 });
             } catch (e) {
                 console.warn('[MediaSession] Failed to update metadata', e);
@@ -218,7 +228,7 @@ export const useMediaSessionBridge = ({
         const boundSeekActions: MediaSessionAction[] = [];
         if (followsAudioState) {
             const seek = (time: number | undefined, fastSeek = false) => {
-                if (!deck || time === undefined || !Number.isFinite(time)
+                if (!deck || !expectedSource || time === undefined || !Number.isFinite(time)
                     || isNowPlayingControlDisabledRef.current
                     || !isMediaSessionSourceReady(deck, expectedSource, document.baseURI)) return;
 
@@ -241,8 +251,13 @@ export const useMediaSessionBridge = ({
                 }
             }
             audioStateEvents.forEach(event => audio.addEventListener(event, syncAudioState));
+            if (activeDeck && activeDeck !== deck) {
+                audioStateEvents.forEach(event => activeDeck.addEventListener(event, syncAudioState));
+            }
             document.addEventListener('visibilitychange', syncAudioState);
             window.addEventListener('pageshow', syncAudioState);
+            document.addEventListener('visibilitychange', publish);
+            window.addEventListener('pageshow', publish);
             syncAudioState();
         }
         publish();
@@ -262,12 +277,17 @@ export const useMediaSessionBridge = ({
                     }
                 }
                 audioStateEvents.forEach(event => audio.removeEventListener(event, syncAudioState));
+                if (activeDeck && activeDeck !== deck) {
+                    audioStateEvents.forEach(event => activeDeck.removeEventListener(event, syncAudioState));
+                }
                 document.removeEventListener('visibilitychange', syncAudioState);
                 window.removeEventListener('pageshow', syncAudioState);
+                document.removeEventListener('visibilitychange', publish);
+                window.removeEventListener('pageshow', publish);
             }
             if (disposableArtworkUrl) URL.revokeObjectURL(disposableArtworkUrl);
         };
-    }, [audioRef, audioSrc, cachedCoverUrl, currentSong, followsAudioState, getDisplayAudioElement, hifiTrackKey, isNowPlayingControlDisabledRef, playbackRoute, seekDuringTransition, unknownArtistLabel]);
+    }, [activeDeckId, audioRef, audioSrc, cachedCoverUrl, currentSong, followsAudioState, getDisplayAudioElement, hifiTrackKey, isNowPlayingControlDisabledRef, playbackRoute, seekDuringTransition, unknownArtistLabel]);
 
     useEffect(() => {
         if (followsAudioState || !('mediaSession' in navigator)) {

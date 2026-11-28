@@ -77,14 +77,21 @@ export const publishMediaSessionTrack = (
     mediaSession: MediaSession,
     audio: Pick<HTMLAudioElement, 'currentTime' | 'duration' | 'playbackRate'>,
     track: MediaSessionTrackMetadata,
-    createMetadata: MediaSessionMetadataFactory = init => new MediaMetadata(init)
+    createMetadata: MediaSessionMetadataFactory = init => new MediaMetadata(init),
+    options: { toleratePositionFailure?: boolean; skipPosition?: boolean } = {}
 ) => {
     const positionState = createMediaSessionPositionState(audio);
     if (!positionState) {
         return false;
     }
 
-    mediaSession.setPositionState(positionState);
+    if (!options.skipPosition) {
+        try {
+            mediaSession.setPositionState(positionState);
+        } catch (error) {
+            if (!options.toleratePositionFailure) throw error;
+        }
+    }
     const artworkUrl = getSupportedMediaSessionArtworkUrl(track.artworkUrl);
     mediaSession.metadata = createMetadata({
         title: track.title,
